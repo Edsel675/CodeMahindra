@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Submission } from '../types/submissions';
+import { Submission } from '../types/submission';
 import { CheckCircle2, XCircle, Code2 } from 'lucide-react';
 
 const mockSubmissions: Submission[] = [
@@ -50,8 +50,6 @@ interface SubmissionsProps {
 }
 
 const Submissions = ({ onSelectSubmission }: SubmissionsProps) => {
-   console.log("entered component");
-   console.log(mockSubmissions);
   return (
     <div className="bg-white p-6 rounded-lg shadow h-full overflow-y-auto">
       <h2 className="text-2xl font-bold mb-6">Submissions</h2>
