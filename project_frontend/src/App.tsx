@@ -9,6 +9,10 @@ import Cart from './pages/Cart';
 import CreateProblem from './pages/CreateProblem';
 import { CartProvider } from './contexts/CartContext';
 
+// Importa los componentes de login y registro
+import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
+
 function App() {
   return (
     <CartProvider>
@@ -16,6 +20,7 @@ function App() {
         <div className="min-h-screen bg-[#1e1e1e]">
           <Navbar />
           <Routes>
+            {/* Rutas existentes */}
             <Route path="/" element={<Problems />} />
             <Route path="/problems" element={<Problems />} />
             <Route path="/problems/create" element={<CreateProblem />} />
@@ -24,6 +29,10 @@ function App() {
             <Route path="/ranking" element={<Ranking />} />
             <Route path="/store" element={<Store />} />
             <Route path="/cart" element={<Cart />} />
+
+            {/* Rutas de Login y Registro */}
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
           </Routes>
         </div>
       </Router>
