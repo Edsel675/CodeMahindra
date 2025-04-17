@@ -1,4 +1,8 @@
-import { Comment } from '../types/submissions';
+import { useState } from 'react';
+import { Comment } from '../types/submission';
+import NewCommentModal from './NewCommentModal';
+import axios from 'axios';
+import { Description } from '@headlessui/react';
 
 const mockComments: Comment[] = [
   {
@@ -31,17 +35,71 @@ const mockComments: Comment[] = [
   }
 ];
 
-const Discussions = () => {
+interface DiscussionsProps {
+  problemId: number;
+}
+const Discussions: React.FC<DiscussionsProps> = ({ problemId }) => {
+  const [showNewComment, setShowNewComment] = useState(false);
+  const [comments, setComments] = useState(mockComments);
+
+  const handleAddNewComment = () => {
+    setShowNewComment(true);
+  };
+
+  const handleCloseNewComment = () => {
+    setShowNewComment(false);
+  };
+
+  const handlePublishComment = async(newCommentDescription: string) => {
+    try {
+      const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/comments`, {
+        employee_id: '3a1e74c9-8f2a-4ccd-83f4-6e4121672f69',
+        Description: newCommentDescription,
+        problem_id: problemId
+      });
+
+      const newComment = {
+        id: response.data.id,
+        userName: response.data.firstName + ' ' + response.data.lastName,
+        profilePic: response.data.profilePicture,
+        comment: response.data.description,
+        postDate: response.data.messageDate,
+      };
+  
+      // Simulate the API call
+      setComments((prevComments) => [...prevComments, newComment]);
+  
+    } catch (error) {
+      console.error('Checkout failed:', error);
+      alert('There was an error publishing your comment. Please try again.');
+    } finally {
+      handleCloseNewComment();
+    }
+  };
+
+
   return (
     <div className="bg-white p-6 rounded-lg shadow h-full overflow-y-auto">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold">Discussions</h2>
-        <button className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors">
+        <button
+          className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
+          onClick={handleAddNewComment}
+        >
           New Comment
         </button>
       </div>
+
+      {/* Render New Comment Modal */}
+      {showNewComment && (
+        <NewCommentModal
+          onClose={handleCloseNewComment}
+          onPublish={handlePublishComment}
+        />
+      )}
+
       <div className="space-y-6">
-        {mockComments.map((comment) => (
+        {comments.map((comment) => (
           <div key={comment.id} className="flex space-x-4">
             <img
               src={comment.profilePic}

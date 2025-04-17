@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Submission } from '../types/submissions';
+import { Submission } from '../types/submission';
 import { CheckCircle2, XCircle, Code2 } from 'lucide-react';
 
 const mockSubmissions: Submission[] = [
@@ -46,12 +46,10 @@ const mockSubmissions: Submission[] = [
 ];
 
 interface SubmissionsProps {
-  onSelectSubmission?: (code: string) => void;
+  onSelectSubmission?: (code: string, language: string) => void;
 }
 
 const Submissions = ({ onSelectSubmission }: SubmissionsProps) => {
-   console.log("entered component");
-   console.log(mockSubmissions);
   return (
     <div className="bg-white p-6 rounded-lg shadow h-full overflow-y-auto">
       <h2 className="text-2xl font-bold mb-6">Submissions</h2>
@@ -60,7 +58,7 @@ const Submissions = ({ onSelectSubmission }: SubmissionsProps) => {
           <div
             key={submission.id}
             className="border rounded-lg p-4 hover:bg-gray-50 transition-colors cursor-pointer"
-            onClick={() => onSelectSubmission?.(submission.code)}
+            onClick={() => onSelectSubmission?.(submission.code, submission.language)}
           >
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center space-x-3">
@@ -87,7 +85,7 @@ const Submissions = ({ onSelectSubmission }: SubmissionsProps) => {
                   className="flex items-center text-blue-500 hover:text-blue-600"
                   onClick={(e) => {
                     e.stopPropagation();
-                    onSelectSubmission?.(submission.code);
+                    onSelectSubmission?.(submission.code, submission.language);
                   }}
                 >
                   <Code2 className="w-4 h-4 mr-1" />

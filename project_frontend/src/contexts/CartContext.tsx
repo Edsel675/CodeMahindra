@@ -1,15 +1,14 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
 
 interface Product {
-    id: number;
-    image: string;
-    name: string;
-    price: number;
-    published_date: string;
-    description: string;
-    quantity: number;
-  }
-
+  id: number;
+  image: string;
+  name: string;
+  price: number;
+  description: string;
+  quantity: number;
+  publishDate: string;
+}
 interface CartItem extends Product {
   quantity: number;
 }

@@ -1,10 +1,11 @@
 import { useState } from 'react';
+import axios from 'axios'; // Import Axios
 import { Problem, TestCase, ProblemFormData } from '../types/problem';
 import { PlusCircle, Trash2, Save, Edit2 } from 'lucide-react';
 
 const CreateProblem = () => {
   const [problem, setProblem] = useState<ProblemFormData>({
-    title: '',
+    name: '',
     description: '',
     input_format: '',
     output_format: '',
@@ -12,9 +13,17 @@ const CreateProblem = () => {
     sample_output: '',
     difficulty: 'Easy',
     creation_date: new Date().toISOString(),
-    expiration_date: null,
-    testcases: []
+    expiration_date: new Date().toISOString(),
+    testcases: [],
+    solution: '',
+    language: 'C++',
   });
+  
+  // State for confirmation message
+  const [confirmationMessage, setConfirmationMessage] = useState<string | null>(null);
+
+  // State for showing the modal
+  const [isModalVisible, setIsModalVisible] = useState(false);
 
   const handleProblemChange = (field: keyof ProblemFormData, value: string | null) => {
     setProblem(prev => ({
@@ -53,10 +62,63 @@ const CreateProblem = () => {
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Problem data:', problem);
-    // Here you would typically send the data to a backend
+
+    const problemData = {
+      name: problem.name,
+      description: problem.description,
+      input_format: problem.input_format,
+      output_format: problem.output_format,
+      sample_input: problem.sample_input,
+      sample_output: problem.sample_output,
+      difficulty: problem.difficulty,
+      creationDate: problem.creation_date,
+      expirationDate: problem.expiration_date,
+      solution: problem.solution,
+      testcases: problem.testcases.map(tc => ({
+        input: tc.input,
+        output: tc.output,
+      })),
+    };
+
+    try {
+      // Send the problem data to the API (using the correct API URL)
+      const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/problems/with_testcases`, problemData);
+
+      // Handle success
+      setConfirmationMessage('Problem created successfully!');
+      
+      // Show the modal
+      setIsModalVisible(true);
+
+      // Reset the form fields
+      setProblem({
+        name: '',
+        description: '',
+        input_format: '',
+        output_format: '',
+        sample_input: '',
+        sample_output: '',
+        difficulty: 'Easy',
+        creation_date: new Date().toISOString(),
+        expiration_date: new Date().toISOString(),
+        testcases: [],
+        solution: '',
+        language: 'C++',
+      });
+    } catch (error) {
+      // Handle error
+      console.error('Error creating problem:', error);
+      setConfirmationMessage('Failed to create problem. Please try again.');
+      setIsModalVisible(true);
+    }
+  };
+
+  // Close the confirmation modal
+  const closeModal = () => {
+    setIsModalVisible(false);
+    setConfirmationMessage(null);
   };
 
   return (
@@ -65,15 +127,16 @@ const CreateProblem = () => {
         <h1 className="text-2xl font-bold mb-6">Create New Problem</h1>
         
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Basic Problem Information */}
           <div className="grid grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Title
+                name
               </label>
               <input
                 type="text"
-                value={problem.title}
-                onChange={(e) => handleProblemChange('title', e.target.value)}
+                value={problem.name}
+                onChange={(e) => handleProblemChange('name', e.target.value)}
                 className="w-full p-2 border rounded-md"
                 required
               />
@@ -95,6 +158,7 @@ const CreateProblem = () => {
             </div>
           </div>
 
+          {/* Dates */}
           <div className="grid grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -105,6 +169,7 @@ const CreateProblem = () => {
                 value={problem.creation_date.split('T')[0]}
                 className="w-full p-2 border rounded-md"
                 required
+                readOnly
               />
             </div>
             
@@ -122,6 +187,7 @@ const CreateProblem = () => {
             </div>
           </div>
 
+          {/* Description and Formats */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Description
@@ -160,6 +226,7 @@ const CreateProblem = () => {
             </div>
           </div>
 
+          {/* Sample Input and Output */}
           <div className="grid grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -186,6 +253,39 @@ const CreateProblem = () => {
             </div>
           </div>
 
+          {/* Solution and Language */}
+          <div className="grid grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Solution (Code)
+              </label>
+              <textarea
+                value={problem.solution}
+                onChange={(e) => handleProblemChange('solution', e.target.value)}
+                className="w-full p-2 border rounded-md h-32"
+                placeholder="Enter the solution code here..."
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Language
+              </label>
+              <select
+                value={problem.language}
+                onChange={(e) => handleProblemChange('language', e.target.value)}
+                className="w-full p-2 border rounded-md"
+              >
+                <option value="C++">C++</option>
+                <option value="Python">Python</option>
+                <option value="JavaScript">JavaScript</option>
+                <option value="Java">Java</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Test Cases */}
           <div className="border-t pt-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-semibold">Test Cases</h2>
@@ -251,6 +351,25 @@ const CreateProblem = () => {
             </button>
           </div>
         </form>
+
+        {/* Confirmation Popup */}
+        {isModalVisible && (
+          <div className="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center z-50">
+            <div className={`bg-white p-6 rounded-lg shadow-lg max-w-md mx-auto ${confirmationMessage?.includes('successfully') ? 'bg-green-100' : 'bg-red-100'}`}>
+              <h2 className={`text-xl font-semibold ${confirmationMessage?.includes('successfully') ? 'text-green-700' : 'text-red-700'}`}>
+                {confirmationMessage}
+              </h2>
+              <div className="flex justify-center mt-4">
+                <button
+                  onClick={closeModal}
+                  className="bg-blue-500 text-white p-2 rounded-md hover:bg-blue-600 transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

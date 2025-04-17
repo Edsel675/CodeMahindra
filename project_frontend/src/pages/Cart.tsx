@@ -1,25 +1,61 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useCart } from '../contexts/CartContext';
 import { Minus, Plus, Trash2, Check, AlertCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import axios from 'axios';
 
-// Import products to check quantities
-import { products } from './Store';
+interface Product {
+  id: number;
+  image: string;
+  name: string;
+  price: number;
+  description: string;
+  quantity: number;
+  publishDate: string;
+}
+
 
 const Cart: React.FC = () => {
   const { items, removeFromCart, updateQuantity, clearCart, total } = useCart();
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [checkoutComplete, setCheckoutComplete] = useState(false);
 
-  const handleCheckout = () => {
+  const [products, setProducts] = useState<Product[]>([]);
+  // Fetch products from API when the component mounts
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const response = await axios.get<Product[]>(`${import.meta.env.VITE_BACKEND_URL}/products/`);
+        setProducts(response.data);
+      } catch (error) {
+        console.error('Error fetching problems:', error);
+      }
+    };
+
+    fetchProducts();
+  }, []);
+
+  const handleCheckout = async () => {
     setIsCheckingOut(true);
-    // Simulate a checkout process
-    setTimeout(() => {
+    try {
+      await axios.post(`${import.meta.env.VITE_BACKEND_URL}/products/buy`, {
+        employee_id: '3a1e74c9-8f2a-4ccd-83f4-6e4121672f69',
+        products_to_buy: items.map(item => ({
+          product_id: item.id,
+          quantity_to_buy: item.quantity,
+        })),
+      });
+  
       clearCart();
-      setIsCheckingOut(false);
       setCheckoutComplete(true);
-    }, 2000);
+    } catch (error) {
+      console.error('Checkout failed:', error);
+      alert('There was an error processing your order. Please try again.');
+    } finally {
+      setIsCheckingOut(false);
+    }
   };
+  
 
   if (checkoutComplete) {
     return (

@@ -66,6 +66,7 @@ cd CodeMahindra
 cd backend
 pip install -r requirements.txt  # Instalar dependencias (Python)
 uvicorn main:app --reload  # Iniciar backend
+python -m uvicorn main:app --reload --port 8000 # A Saul unicamente le funciono de esta manera
 ```
 
 ### 🎨 **3. Configura el Frontend**  
@@ -139,10 +140,10 @@ docker-compose up -d  # Levantar PostgreSQL/MongoDB con Docker
 | Nombre | Matrícula |
 |--------|-----------|
 | 👤 **Saúl Emilio Delgado Garza** | A01285188 |
-| 👤 **Edsel De Jesús Cisneros Bautista** | - |
+| 👤 **Edsel De Jesús Cisneros Bautista** | A00838063 |
 | 👤 **Rodrigo García Torres** | A00835513 |
 | 👤 **David Enrique García Cruz** | A0083850 |
-| 👤 **Reyli Cruz** | - |
+| 👤 **Reyli Cruz** | A00835807 |
 
 ---
 
