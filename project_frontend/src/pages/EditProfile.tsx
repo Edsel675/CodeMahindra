@@ -1,17 +1,20 @@
 import type React from "react"
+
 import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
+import { jwtDecode } from "jwt-decode"
 import { ArrowLeft, User, Mail, Phone, Flag, Briefcase, Coins, Upload, Loader2, Check, X } from "lucide-react"
 
-interface UserProfile {
+interface DecodedToken {
   firstName: string
   lastName: string
-  email: string
+  sub: string
   nationality: string
   experience?: number
   coins?: number
   phoneNumber: string
   profilePicture?: string
+  isAdmin?: boolean
 }
 
 export default function EditProfile() {
@@ -19,42 +22,34 @@ export default function EditProfile() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [success, setSuccess] = useState<boolean | null>(null)
-  const [user, setUser] = useState<UserProfile>({
+
+  const [user, setUser] = useState<DecodedToken>({
     firstName: "",
     lastName: "",
-    email: "",
+    sub: "",
     nationality: "",
     experience: 0,
     coins: 0,
-    phoneNumber: "",
+    phoneNumber: "",  
     profilePicture: "",
   })
 
-  // Simulating API fetch
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        // Replace with actual API call
-        await new Promise((resolve) => setTimeout(resolve, 1000))
-
-        // Mock data
-        setUser({
-          firstName: "Davis",
-          lastName: "Curtis",
-          email: "davis.curtis@digitalcreatives.com",
-          nationality: "Estados Unidos",
-          experience: 9462,
-          coins: 350,
-          phoneNumber: "+1 555-123-4567",
-          profilePicture: "/placeholder.svg?height=150&width=150",
-        })
+        const token = localStorage.getItem("token")
+        if (token) {
+          const decoded = jwtDecode<DecodedToken>(token)
+          console.log("Decoded:", decoded);
+          setUser(decoded)
+        }
       } catch (error) {
-        console.error("Error fetching user data:", error)
+        console.error("Error decoding token:", error)
       } finally {
         setLoading(false)
       }
     }
-
+  
     fetchUser()
   }, [])
 
@@ -265,7 +260,7 @@ export default function EditProfile() {
                         type="email"
                         id="email"
                         name="email"
-                        value={user.email}
+                        value={user.sub || ""}
                         onChange={handleChange}
                         className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-gray-50"
                         placeholder="tu@email.com"
