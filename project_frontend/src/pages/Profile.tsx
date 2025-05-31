@@ -173,7 +173,7 @@ export default function ProfilePage() {
       <div className="min-h-screen bg-[#363B41] text-black">
         <div className="container mx-auto px-4 py-6">
           <div className="mb-6 flex items-center">
-            <Link to="/" className="mr-4">
+            <Link to="/home" className="mr-4">
               <ArrowLeft className="text-white h-6 w-6" />
             </Link>
             <h1 className="text-white 2xl font-medium">Perfil</h1>
