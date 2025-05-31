@@ -42,6 +42,8 @@ def create_employee(employee_data: EmployeeCreate, db: Session) -> Employee:
         coins=employee_data.coins,
         position_id=employee_data.position_id,
         team_id=employee_data.team_id,
+        github_username=employee_data.github_username
+        
     )
 
     db.add(new_employee)
