@@ -3,10 +3,28 @@ import { ArrowLeft, Edit, Mail, MapPin, Phone } from "lucide-react";
 import { Progress } from "../components/progress";
 import { Card } from "../components/card";
 import profilePic from "../images/robot_male_1.svg"; // Asegúrate de tener esta imagen
-import coinIcon from "../images/robot_male_1.svg";
+import coinIcon from "../images/coin.svg";
 import flag from "../images/robot_male_1.svg";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
+import { useNavigate } from "react-router-dom"
+import CountryName from "../pages/Home/CountryName";
+import ReactCountryFlag from "react-country-flag";
+import CalendarHeatmap from 'react-calendar-heatmap';
+import 'react-calendar-heatmap/dist/styles.css';
+import { parse, format } from 'date-fns';
+
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  CartesianGrid,
+} from "recharts";
+
+const formatDate = (date: Date) => date.toISOString().split("T")[0];
 
 export default function ProfilePage() {
     const [activeTab, setActiveTab] = useState("current");
@@ -22,6 +40,8 @@ export default function ProfilePage() {
     }
 
     const [user, setUser] = useState<User | null>(null);
+    const navigate = useNavigate()
+
 
     useEffect(() => {
       const token = localStorage.getItem("token");
@@ -32,7 +52,7 @@ export default function ProfilePage() {
         return;
       }
     
-      axios.get(`http://localhost:8000/user/me`, {
+      axios.get(`${import.meta.env.VITE_BACKEND_URL}/user/me`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -46,6 +66,109 @@ export default function ProfilePage() {
       });
     }, []);
 
+    const [xpHistory, setXpHistory] = useState<{ date: string; experience: number }[]>([]);
+
+    useEffect(() => {
+      const userId = localStorage.getItem("user_id");
+      if (!userId) return;
+
+      axios
+        .get(`${import.meta.env.VITE_BACKEND_URL}/xp-history/employee/${userId}`)
+        .then((res) => {
+          const formatted = res.data.map((entry: any) => ({
+            date: new Date(entry.date).toLocaleDateString(), // e.g., "5/30/2025"
+            experience: entry.experience,
+          }));
+          setXpHistory(formatted);
+        })
+        .catch((err) => {
+          console.error("Error fetching XP history", err);
+        });
+    }, []);
+
+    const [ratingHistory, setRatingHistory] = useState<string[]>([]);
+
+    useEffect(() => {
+      const userId = localStorage.getItem("user_id");
+      if (!userId) return;
+
+      axios
+        .get(`${import.meta.env.VITE_BACKEND_URL}/solutions/employee/${userId}`)
+        .then((res) => {
+          const sortedSolutions = res.data
+            .filter((sol: any) => sol.status === "Accepted")
+            .sort((a: any, b: any) => new Date(a.submissionDate).getTime() - new Date(b.submissionDate).getTime());
+
+            const datesOnly = sortedSolutions.map((sol: any) =>
+              new Date(sol.submissionDate).toLocaleDateString()
+            );
+
+          setRatingHistory(datesOnly);
+        })
+        .catch((err) => {
+          console.error("Error fetching rating history", err);
+        });
+    }, []);
+
+    const [difficultyData, setDifficultyData] = useState<{ Easy: number; Medium: number; Hard: number } | null>(null);
+
+    useEffect(() => {
+      const userId = localStorage.getItem("user_id");
+      if (!userId) return;
+      axios
+        .get(`${import.meta.env.VITE_BACKEND_URL}/employees/solved-difficulty/${userId}`)
+        .then((res) => {
+          setDifficultyData(res.data);
+        })
+        .catch((err) => {
+          console.error("Error fetching difficulty data", err);
+        });
+    }, []);
+    const chartHeightPx = 90;
+    console.log("this is the data: ", difficultyData);
+    const allZero =
+    difficultyData !== null &&
+    Object.values(difficultyData).every((v) => v === 0);
+
+    const dateCounts: { [key: string]: number } = {};
+
+    ratingHistory.forEach((dateStr) => {
+      const parsedDate = parse(dateStr, 'M/d/yyyy', new Date());
+      const formattedDate = format(parsedDate, 'yyyy-MM-dd');
+      dateCounts[formattedDate] = (dateCounts[formattedDate] || 0) + 1;
+    });
+
+    const currentYear = new Date().getFullYear();
+    
+    // Extract years
+  const years = useMemo(() => {
+    const yearSet = new Set(
+      ratingHistory.map((dateStr) => new Date(dateStr).getFullYear())
+    );
+    return Array.from(yearSet).sort((a, b) => b - a);
+  }, [ratingHistory]);
+
+  const [selectedYear, setSelectedYear] = useState<number>(
+    years[0] ?? new Date().getFullYear()
+  );
+
+  // Filter heatmap data for selected year
+  const heatmapValues = useMemo(() => {
+    const counts: Record<string, number> = {};
+
+    ratingHistory.forEach((dateStr) => {
+      const date = new Date(dateStr);
+      if (date.getFullYear() === selectedYear) {
+        const key = formatDate(date);
+        counts[key] = (counts[key] || 0) + 1;
+      }
+    });
+
+    return Object.entries(counts).map(([date, count]) => ({ date, count }));
+  }, [ratingHistory, selectedYear]);
+  const startDate = `${selectedYear}-01-01`;
+  const endDate = `${selectedYear}-12-31`;
+    
     return (
       <div className="min-h-screen bg-[#363B41] text-black">
         <div className="container mx-auto px-4 py-6">
@@ -66,7 +189,7 @@ export default function ProfilePage() {
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center">
-                        <h2 className="text-lg font-bold text-black">{user?.firstName ?? "Cargando..."}</h2>
+                        <h2 className="text-lg font-bold text-black">{user ? `${user.firstName} ${user.lastName}` : "Cargando..."}</h2>
                           <img src={flag} alt="Flag" className="h-5 w-6" />
                         </div>
                       </div>
@@ -89,7 +212,10 @@ export default function ProfilePage() {
                 <div className="mt-6 rounded-lg bg-[#FFFF] p-6">
                   <div className="mb-4 flex items-center justify-between">
                     <h3 className="text-lg font-medium">Personal Information</h3>
-                    <button className="text-black hover:text-black">
+                    <button 
+                      className="text-black hover:text-black"
+                      onClick={() => navigate('/profile/view')}
+                    >
                       <Edit className="h-5 w-5" />
                     </button>
                   </div>
@@ -104,9 +230,13 @@ export default function ProfilePage() {
                     </div>
                     <div className="flex items-center">
                       <MapPin className="mr-3 h-5 w-5 text-black" />
-                      <span>{user?.nationality ?? "No especificado"}</span>
+                      {user?.nationality ? (
+                        <CountryName code={user.nationality} />
+                      ) : (
+                        <span>No especificado</span>
+                      )}
                     </div>
-                  </div>
+                    </div>
                 </div>
               </Card>
             </div>
@@ -114,100 +244,127 @@ export default function ProfilePage() {
           {/* Right column - Charts and stats */}
           <div className="space-y-6">
             {/* Line chart */}
-            <Card className="bg-[#E6E7E8] p-4">
-              <div className="flex justify-end">
-                <div className="rounded border border-gray-700 px-2 py-1 text-xs">Only rated</div>
-              </div>
-              <div className="h-[200px] w-full">
-                {/* Placeholder for line chart */}
-                <div className="h-full w-full rounded bg-[#222] p-2">
-                  <div className="h-full w-full bg-gradient-to-b from-purple-500/30 via-green-500/30 to-transparent rounded"></div>
+            {xpHistory && xpHistory.length > 0 ? (
+              <Card className="bg-[#E6E7E8] p-4">
+                <div className="mb-2">
+                  <h2 className="text-lg font-semibold text-gray-800">Rating Chart</h2>
+                  <p className="text-sm text-gray-600">
+                    This chart shows the rating progression over time for each dimension.
+                  </p>
                 </div>
-              </div>
-            </Card>
+                <div className="h-[200px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={xpHistory}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="date" tick={{ fontSize: 10 }} />
+                      <YAxis />
+                      <Tooltip />
+                      <Line
+                        type="monotone"
+                        dataKey="experience"
+                        stroke="#10B981"
+                        strokeWidth={2}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </Card>
+            ) : (
+              <Card className="bg-[#E6E7E8] p-4">
+                <div className="mb-2">
+                  <h2 className="text-lg font-semibold text-gray-800">Rating Chart</h2>
+                  <p className="text-sm text-gray-600">
+                    This chart shows the rating progression over time for each dimension.
+                  </p>
+                </div>
+                <div className="text-center text-gray-600 text-sm">
+                  No data available to display the chart.
+                </div>
+              </Card>
+            )}
+
+
 
             {/* Bar chart */}
             <Card className="bg-[#E6E7E8] p-4">
               <div className="mb-2 flex items-center">
                 <h3 className="text-sm font-medium">Problem Ratings</h3>
-                <div className="ml-auto flex items-center">
-                  <div className="mr-2 h-3 w-3 rounded bg-gray-400"></div>
-                  <span className="text-xs text-gray-400">Problems Solved</span>
-                </div>
               </div>
-              <div className="h-[150px] w-full">
-                {/* Placeholder for bar chart */}
-                <div className="flex h-full w-full items-end justify-between">
-                  {[80, 12, 12, 10, 8, 10, 35, 8, 15, 18, 5, 3, 2, 1, 1].map((height, i) => (
-                    <div
-                      key={i}
-                      className={`w-[5%] ${i === 6 ? "bg-green-500" : "bg-gray-400"}`}
-                      style={{ height: `${height}%` }}
-                    ></div>
-                  ))}
-                </div>
+              <div className="relative h-[120px] w-full">
+                {difficultyData && !allZero ? (
+                  <div className="flex h-full w-full items-end justify-between">
+                    {["Easy", "Medium", "Hard"].map((level) => {
+                      const value = difficultyData[level as keyof typeof difficultyData];
+                      const max = Math.max(...Object.values(difficultyData));
+                      const height = max === 0 ? 0 : (value / max) * chartHeightPx;
+
+                      const barColor =
+                        level === "Easy"
+                          ? "bg-green-500"
+                          : level === "Medium"
+                          ? "bg-yellow-500"
+                          : "bg-red-500";
+
+                      return (
+                        <div
+                          key={level}
+                          className="flex flex-col items-center justify-end w-[30%] group relative"
+                        >
+                          <div
+                            className={`w-full rounded-t ${barColor} cursor-default`}
+                            style={{ height: `${height}px` }}
+                          ></div>
+                          {/* Tooltip */}
+                          <div className="absolute bottom-[110%] mb-1 hidden group-hover:block px-2 py-1 text-xs text-white bg-black rounded">
+                            {value} {value === 1 ? "problem" : "problems"}
+                          </div>
+                          <span className="mt-2 text-sm text-gray-700">{level}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-center text-gray-600 text-sm">
+                    No difficulty data available.
+                  </div>
+                )}
               </div>
             </Card>
 
+
             {/* Activity calendar */}
-            <Card className="bg-[#E6E7E8] p-4">
-              <div className="mb-4 flex items-center justify-between">
-                <div className="flex items-center">
-                  <span className="mr-2 text-lg font-medium">65</span>
-                  <span className="text-sm text-gray-400">submissions in the past one year</span>
-                </div>
-                <div className="flex items-center space-x-4">
-                  <div className="flex items-center">
-                    <span className="mr-1 text-xs text-gray-400">Total active days:</span>
-                    <span className="text-xs">12</span>
-                  </div>
-                  <div className="flex items-center">
-                    <span className="mr-1 text-xs text-gray-400">Max streak:</span>
-                    <span className="text-xs">2</span>
-                  </div>
-                  <div className="relative">
-                    <button
-                      className={`rounded border px-2 py-1 text-xs ${activeTab === "current" ? "bg-gray-400" : ""}`}
-                      onClick={() => setActiveTab("current")}
-                    >
-                      Current
-                    </button>
-                  </div>
-                </div>
-              </div>
-              <div className="h-[100px] w-full">
-                {/* Placeholder for activity calendar */}
-                <div className="grid h-full w-full grid-cols-12 gap-1">
-                  {Array.from({ length: 12 }).map((_, monthIndex) => (
-                    <div key={monthIndex} className="flex flex-col space-y-1">
-                      {Array.from({ length: 5 }).map((_, weekIndex) => (
-                        <div
-                          key={weekIndex}
-                          className={`h-3 w-3 rounded-sm ${
-                            Math.random() > 0.85 ? "bg-green-500" : Math.random() > 0.95 ? "bg-green-700" : "bg-gray-400"
-                          }`}
-                        ></div>
-                      ))}
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className="mt-2 flex justify-between text-xs text-gray-400">
-                <span>Feb</span>
-                <span>Mar</span>
-                <span>Apr</span>
-                <span>May</span>
-                <span>Jun</span>
-                <span>Jul</span>
-                <span>Aug</span>
-                <span>Sep</span>
-                <span>Oct</span>
-                <span>Nov</span>
-                <span>Dec</span>
-                <span>Jan</span>
-                <span>Feb</span>
-              </div>
-            </Card>
+            <div className="p-4 bg-[#F9FAFB] rounded-xl shadow-sm">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-lg font-semibold text-gray-700">Activity Calendar</h2>
+        <select
+          className="text-sm px-2 py-1 border border-gray-300 rounded-md"
+          value={selectedYear}
+          onChange={(e) => setSelectedYear(Number(e.target.value))}
+        >
+          {years.map((year) => (
+            <option key={year} value={year}>
+              {year}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="overflow-x-auto">
+        <CalendarHeatmap
+          startDate={startDate}
+          endDate={endDate}
+          values={heatmapValues}
+          classForValue={(value) => {
+            if (!value || value.count === 0) return "fill-gray-200";
+            if (value.count === 1) return "fill-green-200";
+            if (value.count === 2) return "fill-green-400";
+            return "fill-green-600";
+          }}
+          titleForValue={(value) =>
+            value ? `${value.date}: ${value.count} submission(s)` : "No submissions"
+          }
+        />
+      </div>
+    </div>
           </div>
         </div>
       </div>

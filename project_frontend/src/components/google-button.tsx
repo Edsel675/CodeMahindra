@@ -8,7 +8,7 @@ export default function GoogleButton() {
   // Aquí defines la función handleGoogleResponse
   const handleGoogleResponse = async (response: any) => {
     try {
-      const res = await fetch("http://localhost:8000/auth/google", {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/auth/google`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -20,6 +20,20 @@ export default function GoogleButton() {
         const data = await res.json();
         localStorage.setItem("token", data.access_token);
         localStorage.setItem("user", JSON.stringify(data.user));
+
+        // Hacer una solicitud para obtener el perfil del usuario
+      const userRes = await fetch(`${import.meta.env.VITE_BACKEND_URL}/user/me`, {
+        headers: {
+          Authorization: `Bearer ${data.access_token}`,
+        },
+      });
+      console.log("this is token", data.access_token)
+      if (!userRes.ok) {
+        throw new Error("No se pudo obtener el perfil del usuario.");
+      }
+
+      const userData = await userRes.json();
+      localStorage.setItem("user_id", userData.id); // Guardar el ID en localStorage
 
         // Redirige dependiendo si es un usuario nuevo o ya existente
         if (data.user.firstName === "Google User") {

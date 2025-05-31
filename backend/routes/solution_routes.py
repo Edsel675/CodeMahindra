@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from typing import List
 from uuid import UUID
 from sqlalchemy.orm import Session
+from models.solution import Solution
 from database import get_db
 from schemas.solution import SolutionCreate, SolutionUpdate, SolutionOut, Submission, LeaderboardEntry
 from schemas.testcase import TestCaseResult, TestInput
@@ -92,3 +93,16 @@ def get_problem_leaderboard(
     db: Session = Depends(get_db)
 ):
     return get_problem_leaderboard_data(problem_id, db)
+
+
+@router.get("/employee/{employee_id}", response_model=List[SolutionOut])
+def get_solutions_by_employee(employee_id: UUID, db: Session = Depends(get_db)):
+    solutions = db.query(Solution)\
+                  .filter(Solution.employee_id == employee_id)\
+                  .order_by(Solution.submissionDate)\
+                  .all()
+
+    if not solutions:
+        raise HTTPException(status_code=404, detail="No solutions found for this employee")
+
+    return solutions

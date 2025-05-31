@@ -1,8 +1,11 @@
 import type React from "react"
 import { useState, useEffect, useRef } from "react"
-import { Eye, EyeOff, ArrowRight, Mail, Lock, Github, Linkedin, Facebook } from "lucide-react"
+import { Eye, EyeOff, ArrowRight, Mail, Lock,} from "lucide-react"
 import { Link } from "react-router-dom"
 import logo from "../images/logo-codemahindra.png" // ✅ Importamos el logo
+import GoogleLoginButton from "@/components/GoogleLoginButton";
+import GitHubLoginButton from "@/components/GitHubLoginButton";
+import { jwtDecode } from "jwt-decode";
 
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState("")
@@ -112,13 +115,26 @@ const LoginPage: React.FC = () => {
       }
   
       const data = await response.json()
-      const token = data.access_token // Token recibido del backend
   
       // Guardar el token en el almacenamiento local o en un estado global
-      localStorage.setItem("auth_token", token)
-  
+      localStorage.setItem("token", data.access_token);
+      // Hacer una solicitud para obtener el perfil del usuario
+      const userRes = await fetch(`${import.meta.env.VITE_BACKEND_URL}/user/me`, {
+        headers: {
+          Authorization: `Bearer ${data.access_token}`,
+        },
+      });
+      console.log("this is token", data.access_token)
+      if (!userRes.ok) {
+        throw new Error("No se pudo obtener el perfil del usuario.");
+      }
+
+      const userData = await userRes.json();
+      localStorage.setItem("user_id", userData.id); // Guardar el ID en localStorage
+
+      
       // Redirigir a la página principal o a donde desees
-      window.location.href = "/dashboard" // Cambia esto según tu flujo de navegación
+      window.location.href = "/home" // Cambia esto según tu flujo de navegación
     } catch (error) {
       if (error instanceof Error) {
         setError(error.message)
@@ -128,6 +144,28 @@ const LoginPage: React.FC = () => {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  const params = new URLSearchParams(window.location.search);
+  const token = params.get("token");
+
+  if (token) {
+    localStorage.setItem("token", token);
+
+    try {
+      const user = jwtDecode(token);
+      localStorage.setItem("user", JSON.stringify(user));
+      console.log("Usuario autenticado desde GitHub:", user);
+
+      if ("github_username" in user) {
+      console.log("Nombre de usuario de GitHub:", user.github_username);
+      }
+    } catch (error) {
+      console.error("Error al decodificar token:", error);
+    }
+
+    window.location.href = "/home";
+    
   }
 
   return (
@@ -150,24 +188,9 @@ const LoginPage: React.FC = () => {
               <p className="text-gray-500 mb-8">Bienvenido de nuevo, ingresa tus credenciales</p>
 
               {/* Botones de redes sociales */}
-              <div className="grid grid-cols-4 gap-3 mb-6">
-                <button className="flex justify-center items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                  <svg className="w-5 h-5" viewBox="0 0 24 24">
-                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22z" />
-                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84C7.71 7.31 10.14 5.38 12 5.38z" />
-                  </svg>
-                </button>
-                <button className="flex justify-center items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                  <Facebook className="w-5 h-5 text-[#1877F2]" />
-                </button>
-                <button className="flex justify-center items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                  <Github className="w-5 h-5" />
-                </button>
-                <button className="flex justify-center items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                  <Linkedin className="w-5 h-5 text-[#0A66C2]" />
-                </button>
+              <div className="space-y-3">
+                <GoogleLoginButton />
+                <GitHubLoginButton />
               </div>
 
               <div className="relative flex items-center mb-6">

@@ -1,6 +1,7 @@
 from sqlalchemy import Column, Integer, String, Text, Float, DateTime, Boolean
 from sqlalchemy.sql import func
 from database import Base
+from sqlalchemy.orm import relationship
 
 class Problem(Base):
     __tablename__ = "Problem"
@@ -20,3 +21,6 @@ class Problem(Base):
     solution = Column(Text)
     language = Column(Text, nullable=False)
     was_graded = Column(Boolean, nullable=False, server_default='false')
+    successful_submissions = Column(Integer, default=0)
+    total_submissions = Column(Integer, default=0)
+    employees = relationship("EmployeeProblem", back_populates="problem")

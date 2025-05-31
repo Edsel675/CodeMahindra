@@ -1,5 +1,7 @@
+from datetime import datetime
 from sqlalchemy.orm import Session
 from fastapi import HTTPException
+from models.purchase import Purchase, PurchaseProduct
 from models.product import Product
 from models.employee import Employee
 from schemas.product import ProductCreate, ProductUpdate, ProductPurchase
@@ -101,6 +103,24 @@ def buy_items(employee_id: int, products_to_buy: List[ProductPurchase], db: Sess
     # All checks passed, now update product quantities
     for pid, new_qty in new_quantities.items():
         product_map[pid].quantity = new_qty
+    
+    
+    # Register the purchase
+    purchase = Purchase(date=datetime.utcnow())
+    db.add(purchase)
+    db.commit()
+    db.refresh(purchase)
+
+    # Register each purchase-product
+    for item in products_to_buy:
+        purchase_product = PurchaseProduct(
+            purchase_id=purchase.id,
+            employee_id=employee_id,
+            product_id=item.product_id,
+            count=item.quantity_to_buy,
+            delivered=False
+        )
+        db.add(purchase_product)
 
     db.commit()
 

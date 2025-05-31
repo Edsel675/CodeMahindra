@@ -29,8 +29,8 @@ from routes.suggestion_resource_routes import router as suggestion_resource_rout
 from routes.auth import router as auth_router
 from routes.users import router as users_router
 from routes.ranking_route import router as ranking_router
-
-
+from routes.employee_xp_history_route import router as employee_xp_history_router
+from routes.purchase_routes import router as purchase_router
 
 
 # Initialize the FastAPI app
@@ -74,7 +74,8 @@ app.include_router(suggestion_resource_router)
 app.include_router(auth_router, prefix="/auth", tags=["auth"])
 app.include_router(users_router)
 app.include_router(ranking_router)
-
+app.include_router(employee_xp_history_router)
+app.include_router(purchase_router)
 
 # Health check route
 @app.get("/")

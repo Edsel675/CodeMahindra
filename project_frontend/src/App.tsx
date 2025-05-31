@@ -1,37 +1,41 @@
 import { BrowserRouter as Router, Routes, Route, Outlet } from 'react-router-dom';
+
 import Navbar from './components/Navbar';
-import Problems from './pages/Problems';
-import Tasks from './pages/Tasks';
-import Code from './pages/Code';
-import Ranking from './pages/Ranking';
+import Problems from './pages/Problems/Page';
+import Tasks from './pages/Tasks/Tasks';
+import Ranking from './pages/Ranking/Ranking';
 import Store from './pages/Store';
 import Cart from './pages/Cart';
 import CreateProblem from './pages/CreateProblem';
 import ProblemList from './pages/ProblemList';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
-import TeamPage from './components/TeamPage';
-import Dashboard from './components/Dashboard';
-import LandingPage from './pages/Landing'; // <-- Tu nueva página
+import TeamPage from './pages/TeamPage';
+import Dashboard from './pages/Home/Page';
+import LandingPage from './pages/LandingPage/Page';
 import { CartProvider } from './contexts/CartContext';
-import PullRequest from './pages/PullRequest';
 import GoogleReg from './pages/GoogleReg';
 import ProfilePage from './pages/Profile';
 import AdminDashboard from './pages/AdminDashboard';
-import Roadmap from './pages/Roadmap';
-import SpaceBackground from './components/SpaceBackground';
+import Roadmap from './pages/Roadmap/Page';
 import StoreManagement from './pages/StoreManagement';
 import ImageUploaderCloudinary from './pages/ImageUploaderCloudinary'
 import ManageUsers from './pages/ManageUsers';
 import ManageProblems from './pages/ManageProblems';
 import EditProfile from './pages/EditProfile';
-
+import PurchaseManager from './pages/PurchaseManager';
+import CodeLayout from './pages/Code/CodeLayout';
+import CodeDashboard from './pages/Code/CodeDashboard/Page';
+import Commits from './pages/Code/Commits/Page';
+import PullRequests from './pages/Code/PullRequests/Page';
+import RecommendedResources from './pages/Code/RecommendedResources/Page';
+import BotStore from './pages/Home/BotStore';
 // 1. Layout que incluye la Navbar
 function LayoutConNavbar() {
   return (
     <div className="min-h-screen bg-[#1e1e1e]">
       <Navbar />
-      <Outlet /> {/* This will render the nested routes */}
+      <Outlet />
     </div>
   );
 }
@@ -42,15 +46,16 @@ function App() {
       <Router>
         <Routes>
           {/* 2. Ruta que NO muestra la Navbar (LandingPage) */}
-          <Route path="/landing" element={<LandingPage />} />
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/landing-page" element={<LandingPage />} />
           <Route path="/GoogleReg" element={<GoogleReg />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/login" element={<LoginPage />} />
 
           {/* 3. Ruta con Navbar */}
           <Route element={<LayoutConNavbar />}>
-            <Route path="/space" element={<SpaceBackground />} />
-            <Route path="/" element={<Dashboard />} /> {/* Dashboard as default */}
+          
+            <Route path="/home" element={<Dashboard />} />
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/manage-users" element={<ManageUsers />} />
             <Route path="/manage-problems" element={<ManageProblems />} />
@@ -60,8 +65,6 @@ function App() {
             <Route path="/problems" element={<ProblemList />} />
             <Route path="/problems/create" element={<CreateProblem />} />
             <Route path="/tasks" element={<Tasks />} />
-            <Route path="/code" element={<Code />} />
-            <Route path="/code/detail/:id" element={<PullRequest />} />
             <Route path="/ranking" element={<Ranking />} />
             <Route path="/store" element={<Store />} />
             <Route path="/store/manage" element={<StoreManagement />} />
@@ -71,7 +74,17 @@ function App() {
             <Route path="/test" element={<ImageUploaderCloudinary />} />
             <Route path="/Profile" element={<ProfilePage />} />
             <Route path="/profile/view" element={<EditProfile />} />
+            <Route path ='/manage-purchase' element = {<PurchaseManager/>} />
 
+            <Route element={<CodeLayout />}>
+              <Route path="/CodeDashboard" element={<CodeDashboard />} />
+              <Route path="/Commits" element={<Commits />} />
+              <Route path="/PullRequests" element={<PullRequests />} />
+              <Route path="/RecommendedResources" element={<RecommendedResources />} />
+            </Route>
+
+            <Route path="/bot-store" element={<BotStore />} />
+          
           </Route>
         </Routes>
       </Router>

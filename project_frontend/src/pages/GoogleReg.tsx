@@ -1,4 +1,5 @@
 import GoogleButton from "@/components/google-button"
+import GitHubButton from "@/components/Github-button"
 import type React from "react"
 import { useState, useEffect, useRef } from "react"
 import { useNavigate } from "react-router-dom"
@@ -158,6 +159,7 @@ const GoogleReg: React.FC = () => {
                         <div className="flex-grow border-t border-gray-300"></div>
                         </div>
                         <GoogleButton />
+                        <GitHubButton />
                         </div>
                     </div>
                  </div>

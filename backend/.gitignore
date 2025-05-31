@@ -7,19 +7,18 @@ __pycache__/
 venv/
 env/
 cm-env/
+backend/cm-env/
 
-# VSCode files
+# Node.js dependencies
+node_modules/
+
+# VSCode settings
 .vscode/
 
-# Environment variables
+# Environment variable files
 .env
-
-# OS files
-.DS_Store
-Thumbs.db
-
-# Ignorar archivo de entorno
 backend/.env
 
-# Ignorar entorno virtual (si está en backend o en la raíz)
-backend/cm-env/
+# OS-specific files
+.DS_Store
+Thumbs.db

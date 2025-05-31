@@ -34,6 +34,13 @@ const AdminDashboard = () => {
       path: '/manage-problems',
       color: 'bg-red-500',
     },
+    {
+      title: 'Manage Purchases',
+      description: 'View and deliver purchases',
+      icon: BookOpen,
+      path: '/manage-purchase',
+      color: 'bg-red-500',
+    }
   ];
 
   return (

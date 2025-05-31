@@ -39,7 +39,7 @@ const Cart: React.FC = () => {
     setIsCheckingOut(true);
     try {
       await axios.post(`${import.meta.env.VITE_BACKEND_URL}/products/buy`, {
-        employee_id: 'f683124d-6fc7-4586-8590-86573f5aa66e',
+        employee_id: localStorage.getItem("user_id"),
         products_to_buy: items.map(item => ({
           product_id: item.id,
           quantity_to_buy: item.quantity,

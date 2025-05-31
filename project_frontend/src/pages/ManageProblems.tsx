@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Trash2, GraduationCap, Search } from 'lucide-react';
+import { Trash2, GraduationCap, Search, RotateCcw } from 'lucide-react';
 import axios from 'axios';
+import Toast from '@/components/Toast';
 
 interface ProblemManage {
   id: string;
@@ -15,10 +16,12 @@ interface ProblemCardProps {
   problem: ProblemManage;
   onDelete: (id: string) => void;
   onGrade: (id: string) => void;
+  onActivate: (id: string) => void;
   onViewProblem: (id: string) => void;
 }
 
-const ProblemCard: React.FC<ProblemCardProps> = ({ problem, onDelete, onGrade, onViewProblem }) => {
+
+const ProblemCard: React.FC<ProblemCardProps> = ({ problem, onDelete, onGrade, onActivate, onViewProblem }) => {
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty.toLowerCase()) {
       case 'easy':
@@ -66,6 +69,15 @@ const ProblemCard: React.FC<ProblemCardProps> = ({ problem, onDelete, onGrade, o
               <GraduationCap size={20} />
             </button>
           )}
+          {problem.wasGraded && (
+            <button
+            onClick={() => onActivate(problem.id)}
+            className="p-2 bg-green-600 hover:bg-green-700 rounded-lg transition-colors text-white"
+            title="Activate problem"
+          >
+            <RotateCcw size={20} />
+          </button>
+          )}
           <button
             onClick={() => onDelete(problem.id)}
             className="p-2 bg-red-600 hover:bg-red-700 rounded-lg transition-colors text-white"
@@ -85,6 +97,18 @@ const ManageProblems: React.FC = () => {
   const [filter, setFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [searchTerm, setSearchTerm] = useState('');
   
+  const [toast, setToast] = useState<{show: boolean; success: boolean; msg: string}>({
+    show: false,
+    success: true,
+    msg: ""
+  });
+  
+  const showToast = (success: boolean, msg: string) => {
+    setToast({ show: true, success, msg });
+    // auto‑hide after 2.5 s
+    setTimeout(() => setToast(t => ({ ...t, show: false })), 2500);
+  };
+
   const fetchProblems = async () => {
     try {
       const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/problems/`);
@@ -115,15 +139,38 @@ const ManageProblems: React.FC = () => {
     }
   };
 
-  const handleGradeProblem = (id: string) => {
-    setProblems(problems.map(problem => 
-      problem.id === id ? { ...problem, wasGraded: true } : problem
-    ));
+  const handleGradeProblem = async (id: string) => {
+    try {
+      await axios.post(`${import.meta.env.VITE_BACKEND_URL}/problems/${id}/grade`);
+      setProblems(problems.map(problem => 
+        problem.id === id ? { ...problem, wasGraded: true } : problem
+      ));
+      showToast(true, "Problem graded successfully!");
+    } catch (error) {
+      console.error("Grading failed:", error);
+      showToast(false, "Failed to grade the problem.");
+    }
   };
 
   const handleViewProblem = (id: string) => {
     navigate(`/problemList/problem/${id}`, { state: { problemId: id } });
   };
+
+  const handleActivateProblem = async (id: string) => {
+    try {
+      await axios.put(`${import.meta.env.VITE_BACKEND_URL}/problems/${id}`, {
+        was_graded: false,
+      });
+      setProblems(problems.map(problem =>
+        problem.id === id ? { ...problem, wasGraded: false } : problem
+      ));
+      showToast(true, "Problem reactivated!");
+    } catch (error) {
+      console.error("Activation failed:", error);
+      showToast(false, "Failed to reactivate the problem.");
+    }
+  };
+  
 
   const filteredProblems = problems
     .filter(problem => {
@@ -175,12 +222,20 @@ const ManageProblems: React.FC = () => {
                 problem={problem} 
                 onDelete={handleDeleteProblem}
                 onGrade={handleGradeProblem}
+                onActivate={handleActivateProblem}
                 onViewProblem={handleViewProblem}
-              />
+            />
             ))}
           </div>
         )}
       </div>
+
+      <Toast
+        show={toast.show}
+        success={toast.success}
+        msg={toast.msg}
+        onClose={() => setToast(t => ({ ...t, show: false }))}
+      />
     </div>
   );
 };

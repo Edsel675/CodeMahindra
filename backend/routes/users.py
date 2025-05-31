@@ -7,25 +7,29 @@ import os
 from sqlalchemy.orm import Session
 from database import get_db 
 from models.employee import Employee
-from schemas.employee import EmployeeOut
+from schemas.employee import EmployeeUpdate
+from fastapi import Body
 
 router = APIRouter()
 
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")  # puede que tengas que ajustar la ruta
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")  # puede que tengas que ajustar la ruta
 SECRET_KEY = os.getenv("SECRET_KEY", "secret")  # asegúrate de tener esto configurado
 ALGORITHM = "HS256"
 
 def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    print(f"🔐 Token recibido: {token}")
     credentials_exception = HTTPException(status_code=401, detail="Token inválido o expirado")
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        print(jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM]))
         email: str = payload.get("sub")
         if email is None:
             raise credentials_exception
-    except JWTError:
+    except JWTError as e:
+        print(f"❌ Error al decodificar el token: {e}")
         raise credentials_exception
-    
+        
     user = get_user_by_email(db, email)
     if user is None:
         raise credentials_exception
@@ -42,8 +46,43 @@ def read_current_user(current_user: Employee = Depends(get_current_user)):
         "phoneNumber": current_user.phoneNumber,
         "isAdmin": current_user.isAdmin,
         "coins": current_user.coins,
-        "profilePicture": current_user.profilePicture
-        
+        "profilePicture": current_user.profilePicture,
+        "nationality":current_user.nationality,
+        "experience":current_user.experience,
+        "id": current_user.id
     }
+@router.put("/user/me")
+def update_current_user(
+    update_data: EmployeeUpdate = Body(...),
+    db: Session = Depends(get_db),
+    current_user: Employee = Depends(get_current_user)
+):
+    if update_data.firstName is not None:
+        current_user.firstName = update_data.firstName
+    if update_data.lastName is not None:
+        current_user.lastName = update_data.lastName
+    if update_data.phoneNumber is not None:
+        current_user.phoneNumber = update_data.phoneNumber
+    if update_data.nationality is not None:
+        current_user.nationality = update_data.nationality
+    if update_data.profilePicture is not None:
+        current_user.profilePicture = update_data.profilePicture
+    if update_data.experience is not None:
+        current_user.experience = update_data.experience
+    db.commit()
+    db.refresh(current_user)
 
+    return {
+        "message": "Usuario actualizado correctamente",
+        "user": {
+            "email": current_user.email,
+            "firstName": current_user.firstName,
+            "lastName": current_user.lastName,
+            "phoneNumber": current_user.phoneNumber,
+            "nationality": current_user.nationality,
+            "profilePicture": current_user.profilePicture,
+            "nationality":current_user.nationality,
+            "experience":current_user.experience
+        }
+    }
 

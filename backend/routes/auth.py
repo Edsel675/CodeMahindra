@@ -5,14 +5,16 @@ from models.employee import Employee
 from schemas.login import LoginRequest
 from schemas.employee import EmployeeCreate, EmployeeOut
 from fastapi import APIRouter, Depends, HTTPException
-from database import get_db  # Asegúrate de importar get_db correctamente
+from database import get_db
 from pydantic import BaseModel
 from schemas.create_access_token import create_access_token 
 import os
 from fastapi.responses import JSONResponse
 from google.oauth2 import id_token
 from google.auth.transport import requests
-from fastapi import HTTPException
+import requests as external_requests
+from fastapi.responses import RedirectResponse
+import urllib.parse 
 
 
 router = APIRouter()
@@ -54,7 +56,7 @@ def create_employee(db: Session, employee_create: EmployeeCreate):
 
 def verify_google_token(token: str):
     try:
-        VITE_GOOGLE_CLIENT_ID = os.getenv("VITE_GOOGLE_CLIENT_ID")
+        VITE_GOOGLE_CLIENT_ID = os.getenv('VITE_GOOGLE_CLIENT_ID')
         if not VITE_GOOGLE_CLIENT_ID:
             raise HTTPException(status_code=500, detail="Google Client ID not configured")
 
@@ -104,14 +106,21 @@ async def login(login_data: LoginRequest, db: Session = Depends(get_db)):
         "coins": user.coins,
         "profilePicture": user.profilePicture,  # Si tienes una imagen de perfil
         "position_id": user.position_id,
+        "nationality": user.nationality,
+        "phoneNumber": user.phoneNumber,
         "team_id": user.team_id
     })
-
+    print(f"[DEBUG] Token generado: {access_token}")
     return {
         "access_token": access_token,
         "token_type": "bearer"
     }
 
+@router.get("/test-token")
+def test_token():
+    token = create_access_token(data={"sub": "test@example.com"})
+    return {"token": token}
+   
 @router.post("/google")
 def google_auth(data: GoogleToken, db: Session = Depends(get_db)):
     google_data = verify_google_token(data.credential)
@@ -143,7 +152,17 @@ def google_auth(data: GoogleToken, db: Session = Depends(get_db)):
         user = create_employee(db, new_user)
 
 
-    token = create_access_token(data={"sub": user.email})
+    token = create_access_token(data={
+        "sub": user.email,
+    "firstName": user.firstName,
+    "lastName": user.lastName,
+    "phoneNumber": user.phoneNumber,
+    "isAdmin": user.isAdmin,
+    "coins": user.coins,
+    "profilePicture": google_data.get("picture") or user.profilePicture,
+    "position_id": user.position_id,
+    "team_id": user.team_id
+})
     return JSONResponse(
         content={
             "access_token": token,
@@ -159,4 +178,103 @@ def google_auth(data: GoogleToken, db: Session = Depends(get_db)):
                 "team_id": user.team_id
             }
         }
+    )
+
+@router.get("/github")
+def login_with_github():
+    github_client_id = os.getenv("GITHUB_CLIENT_ID")
+    redirect_uri = "https://code-mahindra-backend.vercel.app/auth/github/callback"
+    github_auth_url = (
+        f"https://github.com/login/oauth/authorize"
+        f"?client_id={github_client_id}&redirect_uri={redirect_uri}&scope=user:email"
+    )
+    return RedirectResponse(url=github_auth_url)
+
+@router.get("/github/callback")
+def github_callback(code: str, db: Session = Depends(get_db)):
+    client_id = os.getenv("GITHUB_CLIENT_ID")
+    client_secret = os.getenv("GITHUB_CLIENT_SECRET")
+
+    # Obtener token de acceso
+    token_response = external_requests.post(
+        "https://github.com/login/oauth/access_token",
+        headers={"Accept": "application/json"},
+        data={
+            "client_id": client_id,
+            "client_secret": client_secret,
+            "code": code,
+        },
+    )
+    token_json = token_response.json()
+    access_token = token_json.get("access_token")
+
+    if not access_token:
+        raise HTTPException(status_code=400, detail="No se pudo obtener access_token")
+
+    # Obtener información básica del usuario
+    user_response = external_requests.get(
+        "https://api.github.com/user",
+        headers={"Authorization": f"token {access_token}"}
+    )
+    user_data = user_response.json()
+    github_username = user_data.get("login")
+
+    # Obtener correos del usuario
+    emails_response = external_requests.get(
+        "https://api.github.com/user/emails",
+        headers={"Authorization": f"token {access_token}"}
+    )
+    emails_data = emails_response.json()
+
+    # Buscar el email primario y verificado
+    primary_email = next(
+        (email["email"] for email in emails_data if email["primary"] and email["verified"]),
+        None
+    )
+    email = primary_email or f"{user_data['id']}@github.fake"
+
+    # Nombre completo
+    full_name = user_data.get("name") or user_data.get("login")
+    parts = full_name.strip().split()
+    if len(parts) >= 2:
+        first_name = " ".join(parts[:-1])
+        last_name = parts[-1]
+    else:
+        first_name = full_name
+        last_name = "GitHub"
+
+    # Buscar o crear usuario
+    user = get_user_by_email(db, email)
+    if not user:
+        new_user = EmployeeCreate(
+            email=email,
+            password="github",
+            firstName=first_name,
+            lastName=last_name,
+            nationality="No especificado",
+            phoneNumber="0000000000",
+            profilePicture=user_data.get("avatar_url"),
+            github_username=github_username 
+        )
+        user = create_employee(db, new_user)
+
+    # Generar JWT
+    token = create_access_token(data={
+        "sub": user.email,
+        "firstName": user.firstName,
+        "lastName": user.lastName,
+        "phoneNumber": user.phoneNumber,
+        "isAdmin": user.isAdmin,
+        "coins": user.coins,
+        "profilePicture": user.profilePicture,
+        "position_id": user.position_id,
+        "team_id": user.team_id,
+        "github_username": github_username
+    })
+    
+    # Redirigir al frontend
+    return RedirectResponse(
+        url="http://code-mahindra-w4lk.vercel.app/login?" + urllib.parse.urlencode({
+            "token": token
+        })
     )

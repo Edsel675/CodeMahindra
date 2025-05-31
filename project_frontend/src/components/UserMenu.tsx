@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { ChevronDown, User, Settings, LogOut } from "lucide-react"
+import axios from "axios"
 
 interface User {
   firstName: string
@@ -19,15 +20,29 @@ const UserMenu = () => {
   const navigate = useNavigate()
   const [user, setUser] = useState<User | null>(null)
 
-  useEffect(() => {
-    const storedUser = localStorage.getItem("user")
-    const user: User | null = storedUser ? JSON.parse(storedUser) : null
+useEffect(() => {
+      const token = localStorage.getItem("token");
+      console.log("Token en localStorage:", token);
+      console.log("user id: ", localStorage.getItem("user_id"));
 
-    console.log("User from localStorage:", user)
-    if (storedUser) {
-      setUser(JSON.parse(storedUser))
-    }
-  }, [])
+      if (!token) {
+        console.error("No hay token en localStorage");
+        return;
+      }
+    
+      axios.get(`${import.meta.env.VITE_BACKEND_URL}/user/me`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+      .then((res) => {
+        console.log("Usuario autenticado:", res.data);
+        setUser(res.data);
+      })
+      .catch((err) => {
+        console.error("Error al obtener el perfil", err.response?.data || err.message);
+      });
+    }, []);
 
   const handleLogout = () => {
     localStorage.removeItem("token")

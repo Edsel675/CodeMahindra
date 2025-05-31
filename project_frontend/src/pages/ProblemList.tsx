@@ -20,29 +20,30 @@ const ProblemList: React.FC = () => {
   const [totalProblems, setTotalProblems] = useState(0); // Total number of problems in the API
   const [activeProblems, setActiveProblems] = useState<ProblemListData[]>([]); // active challenge problems
   const [currentSlide, setCurrentSlide] = useState(0);
+  const employeeId = localStorage.getItem("user_id")
+  console.log(problems)
   // Fetch problems from API when the component mounts
   useEffect(() => {
     const fetchProblems = async () => {
       try {
-        const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/problems/`);
-        const problems = response.data.map((problem: ProblemListData) => ({
-          ...problem,
-          status: 'not_solved',
-        }));
+        const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/problems/problemList/${employeeId}`);
+        const problems = response.data;
   
         setProblems(problems);
         setFilteredProblems(problems);
         setTotalProblems(problems.length);
         setActiveProblems(problems.filter((problem: ProblemListData) => 
-          problem.expirationDate && problem.expirationDate !== null && isAfter(new Date(problem.expirationDate), new Date())
-        ))
+          problem.expirationDate &&
+          problem.expirationDate !== null &&
+          isAfter(new Date(problem.expirationDate), new Date())
+        ));
       } catch (error) {
         console.error('Error fetching problems:', error);
       }
     };
-  
     fetchProblems();
   }, []);
+  
   
   useEffect(() => {
     const filtered = problems.filter(problem =>
@@ -215,13 +216,16 @@ const ProblemList: React.FC = () => {
                           <div className="w-6 h-6 bg-green-100 text-green-500 rounded-full flex items-center justify-center">
                             ✓
                           </div>
-                        ) : null}
+                        ) : <div className="w-6 h-6 bg-gray-100 text-gray-400 rounded-full flex items-center justify-center">
+                        ✗
+                      </div>
+                      }
                       </td>
                       <td className="py-4 px-4">{problem.name}</td>
                       <td className={`py-4 px-4 ${getDifficultyColor(problem.difficulty)}`}>
                         {problem.difficulty}
                       </td>
-                      <td className="py-4 px-4">{problem.acceptance ? `${problem.acceptance}%` : 'N/A'}</td>
+                      <td className="py-4 px-4">{problem.acceptance !== -1 ? `${(problem.acceptance * 100).toFixed(2)}%` : 'N/A'}</td>
                     </tr>
                   ))}
                 </tbody>

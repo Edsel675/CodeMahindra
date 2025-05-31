@@ -1,3 +1,4 @@
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 from fastapi import HTTPException
 from models.employee import Employee
@@ -5,6 +6,8 @@ from schemas.employee import EmployeeCreate, EmployeeUpdate
 from typing import List
 from uuid import UUID
 from passlib.context import CryptContext
+from models.problem import Problem
+from models.employee_problem import EmployeeProblem
 
 # Contexto para hashear contraseñas
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -72,3 +75,20 @@ def set_admin_status(employee_id: UUID, is_admin: bool, db: Session) -> Employee
     db.commit()
     db.refresh(employee)
     return employee
+
+
+def get_difficulty_counts_by_employee(employee_id: UUID, db: Session):
+    results = (
+        db.query(Problem.difficulty, func.count().label("count"))
+        .join(EmployeeProblem, EmployeeProblem.problem_id == Problem.id)
+        .filter(EmployeeProblem.employee_id == employee_id)
+        .group_by(Problem.difficulty)
+        .all()
+    )
+
+    # Convert to a dict with default values
+    difficulty_counts = {"Easy": 0, "Medium": 0, "Hard": 0}
+    for difficulty, count in results:
+        if difficulty in difficulty_counts:
+            difficulty_counts[difficulty] = count
+    return difficulty_counts

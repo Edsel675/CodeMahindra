@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Shield, ShieldOff, Trash2, Search } from 'lucide-react';
+import Toast from '@/components/Toast';
 
 interface UserManage {
   profileEpic: string;
@@ -70,6 +71,18 @@ const ManageUsers: React.FC = () => {
   const [filter, setFilter] = useState<'all' | 'admin' | 'user'>('all');
   const [searchTerm, setSearchTerm] = useState('');
 
+  const [toast, setToast] = useState<{show: boolean; success: boolean; msg: string}>({
+      show: false,
+      success: true,
+      msg: ""
+    });
+    
+    const showToast = (success: boolean, msg: string) => {
+      setToast({ show: true, success, msg });
+      // auto‑hide after 2.5 s
+      setTimeout(() => setToast(t => ({ ...t, show: false })), 2500);
+    };
+
   const fetchUsers = async () => {
     try {
       const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/employees/`);
@@ -95,8 +108,10 @@ const ManageUsers: React.FC = () => {
     try {
       await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/employees/${id}`);
       setUsers(users.filter(user => user.id !== id));
+      showToast(true, "User deleted succesfully");
     } catch (err) {
       console.error("❌ Error deleting user:", err);
+      showToast(false, "Error deleting user");
     }
   };
 
@@ -115,8 +130,10 @@ const ManageUsers: React.FC = () => {
       setUsers(users.map(user => 
         user.id === id ? { ...user, isAdmin: newIsAdmin } : user
       ));
+      showToast(true, "Updated admin status succesfully");
     } catch (err) {
       console.error("❌ Error updating admin status:", err);
+      showToast(false, "Error updating admin status");
     }
   };
 
@@ -177,6 +194,12 @@ const ManageUsers: React.FC = () => {
           </div>
         )}
       </div>
+      <Toast
+        show={toast.show}
+        success={toast.success}
+        msg={toast.msg}
+        onClose={() => setToast(t => ({ ...t, show: false }))}
+      />
     </div>
   );
 };

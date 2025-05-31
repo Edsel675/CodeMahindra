@@ -1,7 +1,11 @@
+from sqlalchemy import asc, desc, func
 from sqlalchemy.orm import Session
 from fastapi import HTTPException
+from models.employee_xp_history import EmployeeXPHistory
+from models.employee import Employee
+from models.solution import Solution
 from models.problem import Problem
-from schemas.problem import ProblemCreate, ProblemUpdate
+from schemas.problem import ProblemCreate, ProblemGradingResult, ProblemUpdate
 from schemas.problem_with_testcases import ProblemCreateWithTestCases, ProblemOutWithTestCases
 from schemas.problem_with_testcases import TestCaseCreate  # Import TestCaseCreate
 from datetime import datetime
@@ -97,3 +101,118 @@ def create_problem_with_testcases(data: ProblemCreateWithTestCases, db: Session)
         language = new_problem.language,
         testcases=testcases  # Now this is a list of Pydantic model instances, not raw TestCase objects
     )
+    
+from sqlalchemy.sql import func
+from sqlalchemy import desc, asc
+from sqlalchemy.orm import Session
+from sqlalchemy.sql import over
+from fastapi import HTTPException
+
+def grade_problem(problem_id: int, db: Session) -> ProblemGradingResult:
+    # Get the problem first to check difficulty
+    problem = db.query(Problem).filter(Problem.id == problem_id).first()
+    if not problem:
+        raise HTTPException(status_code=404, detail="Problem not found")
+    
+    # Check if problem was already graded
+    '''
+    if problem.was_graded:
+        raise HTTPException(status_code=400, detail="Problem was already graded")
+    '''
+    
+    # Determine rewards based on difficulty
+    if problem.difficulty.lower() == "hard":
+        rewards = [1000, 800, 600]
+    elif problem.difficulty.lower() == "medium":
+        rewards = [800, 600, 400]
+    else:  # easy or unspecified defaults to easy
+        rewards = [600, 400, 200]
+    
+    try:
+        # Rank each solution per employee using row_number
+        ranked_subq = (
+            db.query(
+                Solution.id.label("solution_id"),
+                Solution.employee_id,
+                func.row_number().over(
+                    partition_by=Solution.employee_id,
+                    order_by=(
+                        desc(Solution.testCasesPassed),
+                        asc(Solution.executionTime),
+                        asc(Solution.submissionDate)
+                    )
+                ).label("rank")
+            )
+            .filter(
+                Solution.problem_id == problem_id,
+                Solution.submissionDate >= problem.creationDate # only accepts submissions after the creationDate
+                )
+            .subquery()
+        )
+
+        # Select only the top-ranked (best) solution per employee
+        top_solution_ids = (
+            db.query(ranked_subq.c.solution_id)
+            .filter(ranked_subq.c.rank == 1)
+            .subquery()
+        )
+
+        # Get the actual Solution records
+        top_solutions = (
+            db.query(Solution)
+            .filter(Solution.id.in_(top_solution_ids))
+            .order_by(
+                desc(Solution.testCasesPassed),
+                asc(Solution.executionTime),
+                asc(Solution.submissionDate)
+            )
+            .limit(3)
+            .all()
+        )
+
+        result = ProblemGradingResult(
+            message=f"Graded {len(top_solutions)} submission(s)"
+        )
+
+        for i, solution in enumerate(top_solutions):
+            employee = db.query(Employee).filter(Employee.id == solution.employee_id).first()
+            if not employee:
+                continue
+
+            reward = rewards[i] if i < len(rewards) else 0
+
+            # Update employee stats
+            employee.coins += reward
+            employee.experience += reward
+            
+            # Log the experience update in history
+            xp_entry = EmployeeXPHistory(
+                employee_id=employee.id,
+                experience=employee.experience,
+                date=datetime.utcnow()
+            )
+            db.add(xp_entry)
+
+            # Set result fields
+            if i == 0:
+                result.first_place = employee.id
+                result.first_reward = reward
+            elif i == 1:
+                result.second_place = employee.id
+                result.second_reward = reward
+            elif i == 2:
+                result.third_place = employee.id
+                result.third_reward = reward
+
+        # Mark problem as graded
+        problem.was_graded = True
+        db.commit()
+
+        return result
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to grade problem: {str(e)}"
+        )

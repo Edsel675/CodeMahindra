@@ -31,6 +31,11 @@ class Employee(Base):
     # Relaciones con Position y Team
     position = relationship("Position", back_populates="employees")
     team = relationship("Team", back_populates="employees")
+    xp_history = relationship("EmployeeXPHistory", back_populates="employee", cascade="all, delete")
+    purchase_products = relationship("PurchaseProduct", back_populates="employee", cascade="all, delete")
+    problems = relationship("EmployeeProblem", back_populates="employee")
+
+
     
     # Campos para autenticación con Jira
     jira_email = Column(String(255))
