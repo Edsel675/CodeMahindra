@@ -2,8 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from typing import List
 from sqlalchemy.orm import Session
 from uuid import UUID
-
 from database import get_db
+
 
 from controllers.employee_controller import (
     get_all_employees,
@@ -12,7 +12,8 @@ from controllers.employee_controller import (
     set_admin_status,
     update_employee,
     delete_employee,
-    get_difficulty_counts_by_employee
+    get_difficulty_counts_by_employee,
+    get_employees_by_team_id
 )
 from schemas.employee import AdminStatusUpdate, EmployeeCreate, EmployeeUpdate, EmployeeOut
 from dependencies import get_current_employee
@@ -73,3 +74,11 @@ def update_jira_credentials(
 @router.get("/solved-difficulty/{employee_id}")
 def get_solved_difficulty(employee_id: UUID, db: Session = Depends(get_db)):
     return get_difficulty_counts_by_employee(employee_id, db)
+
+@router.get("/by-team/{team_id}", response_model=List[EmployeeOut])
+def get_employees_by_team(team_id: int, db: Session = Depends(get_db)):
+    employees = get_employees_by_team_id(team_id, db)
+    if not employees:
+        raise HTTPException(status_code=404, detail="No employees found for this team")
+    return employees
+

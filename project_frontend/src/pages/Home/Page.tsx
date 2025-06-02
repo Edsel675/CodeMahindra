@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import CountryName from "./CountryName"; // ajusta la ruta según tu estructura
+import CountryName from "../Home/CountryName"; // ajusta la ruta según tu estructura
 
 import { Bot, Flag, Star, ChevronRight, Users, Database, FileStack as Stack, Link2, Trees as Tree, FileSearch, Package, Share2, MousePointer2, Search, Layout, Clock, GitCompare, Workflow, BrainCircuit, LineChart, Binary, Calculator, ArrowLeft } from 'lucide-react';
 import type { Bot as BotType } from './BotStore';
+import { useTeamMembers } from '@/hooks/useTeamMembers';
+
 
 interface Achievement {
   id: string;
@@ -164,13 +166,15 @@ const achievements: Achievement[] = [
 
 function Dashboard() {
   const navigate = useNavigate();
-  const [user, setUser] = useState({
+const [user, setUser] = useState({
   photo: '',
   firstName: '',
   lastName: '',
   experience: 0, 
   nationality: '',
-  profilePicture:'',
+  profilePicture: '',
+  team_id: null,
+   
 });
 
 
@@ -191,14 +195,30 @@ function Dashboard() {
             experience: data.experience,
             nationality: data.nationality,
             profilePicture: data.profilePicture,
+            team_id: data.team_id, 
           });
         })
         .catch(err => console.error(err));
     }
   }, []);
 
+const [fetchedTeamName, setFetchedTeamName] = useState<string>("");
 
-
+useEffect(() => {
+  const token = localStorage.getItem('token');
+  if (user.team_id && token) {
+    fetch(`${import.meta.env.VITE_BACKEND_URL}/teams/${user.team_id}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+      .then(res => res.json())
+      .then(data => {
+        setFetchedTeamName(data.name);
+      })
+      .catch(err => console.error('Error al obtener nombre del equipo:', err));
+  }
+}, [user.team_id]);
 
 const [selectedAchievement, setSelectedAchievement] = useState<Achievement | null>(null);
   const [showAllAchievements, setShowAllAchievements] = useState(false);
@@ -282,6 +302,12 @@ const [selectedAchievement, setSelectedAchievement] = useState<Achievement | nul
     );
   }
 
+  const { members, loading } = useTeamMembers(user?.team_id || '');
+
+  const totalExp = members.reduce((sum, m) => sum + (m.coins ?? 0), 0);
+  const teamLevel = Math.floor(totalExp / 2000); // Ajusta esta lógica si usas otra
+  const teamName = fetchedTeamName || (members.length > 0 ? `Equipo de ${members[0].firstName}` : "Tu equipo");
+
   return (
     <div className="min-h-screen bg-[#363B41] text-black p-6">
       <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -319,11 +345,10 @@ const [selectedAchievement, setSelectedAchievement] = useState<Achievement | nul
       <div className="flex items-center gap-2"> {/* Ajustado gap-2 para mejor espaciado con la bandera */}
         <span className="font-semibold">{user?.firstName} {user?.lastName}</span>
             {user?.nationality ? (
-              // AQUÍ ES EL CAMBIO PRINCIPAL
-                <CountryName nationality={user.nationality} className="w-5 h-auto" /> // Ajusta className según necesites para CountryName
-                ) : (
-                  <span className="text-sm text-gray-500">Nacionalidad no disponible</span>
-                )}
+                <CountryName code={user.nationality} />
+              ) : (
+                <span className="text-sm text-gray-500">Nacionalidad no disponible</span>
+              )}
               </div>
             </div>
           </div>
@@ -408,52 +433,97 @@ const [selectedAchievement, setSelectedAchievement] = useState<Achievement | nul
         </div>
 
 
-        {/* Team Section */}
-        <div className="bg-white rounded-lg p-6 shadow-sm md:col-span-2">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-bold">Equipo</h2>
-            <button 
+      {/* Team Section */}
+      <div className="bg-white rounded-lg p-6 shadow-sm md:col-span-2">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-bold">Equipo</h2>
+          {user?.team_id && (
+            <button
               className="text-red-500 hover:text-red-600"
-              onClick={() => navigate('/team')}
+              onClick={() => navigate(`/team/${user.team_id}`)}
             >
               Ver más
             </button>
-          </div>
-          
-          <div className="mb-4">
-            <h3 className="font-semibold flex items-center gap-2 mb-2">
-              <Users className="w-4 h-4" />
-              Los fieles y Edsel
-            </h3>
-            <div className="flex justify-between text-sm mb-2">
-              <span>Nivel 5</span>
-              <span>9462 exp</span>
-            </div>
-            <div className="w-full bg-gray-100 rounded-full h-2">
-              <div className="bg-red-500 h-2 rounded-full w-3/4"></div>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            {[...Array(4)].map((_, i) => (
-              <div key={i} className="bg-gray-50 p-4 rounded-lg flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <img 
-                    src="https://images.unsplash.com/photo-1633332755192-727a05c4013d?w=150&h=150&fit=crop" 
-                    alt="Team member" 
-                    className="w-10 h-10 rounded-full"
-                  />
-                  <span>Davis Curtis</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Flag className="w-4 h-4" />
-                  <span>Nivel 5</span>
-                  <span className="text-gray-500">9462 exp</span>
-                </div>
-              </div>
-            ))}
-          </div>
+          )}
         </div>
+
+        {!user?.team_id ? (
+          <div className="text-center bg-gray-50 rounded-lg p-6">
+            <p className="text-lg font-semibold mb-4 text-gray-700">
+              Aún no perteneces a un equipo.
+            </p>
+            <div className="flex justify-center gap-4">
+              <button
+                className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
+                onClick={() => navigate('/teams/create')}
+              >
+                Crear equipo
+              </button>
+              <button
+                className="bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400"
+                onClick={() => navigate('/teams/join')}
+              >
+                Unirse a un equipo
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Nombre del equipo + progreso */}
+            <div className="mb-3">
+              <h3 className="font-semibold flex items-center gap-2 mb-2">
+                <Users className="w-4 h-4" />
+                {teamName || "Equipo"}
+              </h3>
+              <div className="flex justify-between text-xs mb-1">
+                <span>Nivel {teamLevel}</span>
+                <span>{totalExp} exp</span>
+              </div>
+              <div className="w-full bg-gray-100 rounded-full h-2">
+                <div
+                  className="bg-red-500 h-2 rounded-full"
+                  style={{ width: `${Math.min((totalExp % 2000) / 2000 * 100, 100)}%` }}
+                ></div>
+              </div>
+            </div>
+
+            {/* Miembros dinámicos */}
+            <div className="space-y-2">
+              {members.map((member) => (
+                <div
+                  key={member.id}
+                  className="bg-gray-50 p-4 rounded-lg flex items-center justify-between gap-4"
+                >
+                  {/* Columna 1: Foto + Nombre */}
+                  <div className="flex items-center gap-3 w-1/3">
+                    <img
+                      src={member.profilePicture || "https://via.placeholder.com/40"}
+                      alt={`${member.firstName} ${member.lastName}`}
+                      className="w-10 h-10 rounded-full object-cover"
+                    />
+                    <span className="font-medium">{member.firstName} {member.lastName}</span>
+                  </div>
+
+                  {/* Columna 2: País + bandera */}
+                  <div className="w-1/4 text-sm text-gray-500">
+                    <CountryName code={member.nationality ?? ""} />
+                  </div>
+
+                  {/* Columna 3: Nivel */}
+                  <div className="w-1/6 flex items-center gap-1 justify-center">
+                    <span className="font-medium">Nivel {member.level ?? 1}</span>
+                  </div>
+
+                  {/* Columna 4: Exp */}
+                  <div className="w-1/6 text-right text-gray-500">
+                    {member.coins ?? 0} exp
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
 
         {/* Achievements Section */}
         <div className="bg-white rounded-lg p-6 shadow-sm">

@@ -94,3 +94,6 @@ def get_difficulty_counts_by_employee(employee_id: UUID, db: Session):
         if difficulty in difficulty_counts:
             difficulty_counts[difficulty] = count
     return difficulty_counts
+
+def get_employees_by_team_id(team_id: int, db: Session) -> List[Employee]:
+    return db.query(Employee).filter(Employee.team_id == team_id).all()

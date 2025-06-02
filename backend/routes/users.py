@@ -23,14 +23,14 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         print(jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM]))
-        email: str = payload.get("sub")
-        if email is None:
+        user_id: str = payload.get("sub")
+        if user_id is None:
             raise credentials_exception
     except JWTError as e:
         print(f"❌ Error al decodificar el token: {e}")
         raise credentials_exception
         
-    user = get_user_by_email(db, email)
+    user = db.query(Employee).filter(Employee.id == user_id).first()
     if user is None:
         raise credentials_exception
     return user
@@ -48,8 +48,10 @@ def read_current_user(current_user: Employee = Depends(get_current_user)):
         "coins": current_user.coins,
         "profilePicture": current_user.profilePicture,
         "nationality":current_user.nationality,
-        "experience":current_user.experience,
-        "id": current_user.id
+        "experience":current_user.experience, 
+        "id": current_user.id,
+        "team_id": current_user.team_id
+        
     }
 @router.put("/user/me")
 def update_current_user(

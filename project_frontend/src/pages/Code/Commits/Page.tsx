@@ -3,73 +3,10 @@ import {
   GitCommitHorizontal,
   CheckCircle,
   Settings,
-  User,
-  Calendar,
-  Link2
+  Link2,
+  GitBranch
 } from "lucide-react";
-
-const commitsGroupedTest = {
-  "May 27, 2025": [
-    {
-      message: "Merge branch 'main' of https://github.com/RodrigoGarciaT/CodeMahindra",
-      author: "ReyliCruz",
-      date: "yesterday",
-      retro: "Analizando",
-      hash: "bc3988c",
-      verified: false
-    },
-    {
-      message: "Hola",
-      author: "ReyliCruz",
-      date: "yesterday",
-      retro: "Con retro",
-      hash: "818f0f7",
-      verified: false
-    },
-    {
-      message: "Rename Laptop.png to laptop.png",
-      author: "ReyliCruz",
-      date: "yesterday",
-      retro: "Sin cambios",
-      hash: "bb86f5c",
-      verified: true
-    },
-    {
-      message: "New Landing Page Desing",
-      author: "ReyliCruz",
-      date: "yesterday",
-      retro: "Analizando",
-      hash: "8690313",
-      verified: false
-    },
-    {
-      message: "New Landing Page Desing",
-      author: "ReyliCruz",
-      date: "yesterday",
-      retro: "Con retro",
-      hash: "8451871",
-      verified: false
-    },
-    {
-      message: "New Landing Page Desing",
-      author: "ReyliCruz",
-      date: "yesterday",
-      retro: "Sin cambios",
-      hash: "ef5df65",
-      verified: false
-    }
-  ],
-  "May 26, 2025": [
-    {
-      message: "Update EditProfile.tsx",
-      author: "Saul0Delgado",
-      date: "2 days ago",
-      retro: "Analizando",
-      hash: "42aa04a",
-      verified: false
-    }
-  ]
-};
+import { Link } from "react-router-dom";
 
 type Commit = {
   message: string;
@@ -84,99 +21,145 @@ type CommitsGrouped = {
   [date: string]: Commit[];
 };
 
-
 function getRetroBadge(type: string) {
-  const commonClasses =
-    "px-2 py-1 rounded-md text-xs font-semibold inline-flex items-center gap-1";
+  const base = "text-xs px-2 py-1 rounded-md font-semibold inline-flex items-center gap-1";
   switch (type) {
     case "Analizando":
-      return <span className={`${commonClasses} bg-[#30363d]`}><Settings size={14} /> Analizando</span>;
+      return <span className={`${base} bg-[#30363d]`}><Settings size={14} /> Analizando</span>;
     case "Con retro":
-      return <span className={`${commonClasses} bg-green-700`}><CheckCircle size={14} /> Con retro</span>;
+      return <span className={`${base} bg-green-600`}><CheckCircle size={14} /> Con retro</span>;
     case "Sin cambios":
-      return <span className={`${commonClasses} bg-yellow-700`}><GitCommitHorizontal size={14} /> Sin cambios</span>;
+      return <span className={`${base} bg-yellow-700`}><GitCommitHorizontal size={14} /> Sin cambios</span>;
     default:
       return null;
   }
 }
 
 export default function Commits() {
-  const [branch] = useState("main");
-
+  const [branch, setBranch] = useState("main");
   const [commitsGrouped, setCommitsGrouped] = useState<CommitsGrouped>({});
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [search, setSearch] = useState("");
+  const [branches] = useState(["main", "Paradise"]);
+
 
   useEffect(() => {
     const fetchCommits = async () => {
       try {
-        const res = await fetch("http://127.0.0.1:8000/commits");
+        const res = await fetch(`http://127.0.0.1:8000/commits?branch=${branch}`);
         const data = await res.json();
         setCommitsGrouped(data);
       } catch (error) {
         console.error("Error fetching commits:", error);
       }
     };
-
     fetchCommits();
-  }, []);
+  }, [branch]);
 
   return (
-    <div className="p-6">
+    <div className="px-6 py-6 text-white">
       <h1 className="text-2xl font-bold mb-4">Commits</h1>
 
-      {/* Filtros */}
-      <div className="flex gap-4 mb-6">
-        <button className="bg-[#1c2128] text-sm px-4 py-2 rounded-md border border-[#30363d] flex items-center gap-2">
-          <GitCommitHorizontal size={16} />
-          {branch}
-        </button>
-        <button className="bg-[#1c2128] text-sm px-4 py-2 rounded-md border border-[#30363d] flex items-center gap-2">
-          <User size={16} /> All users
-        </button>
-        <button className="bg-[#1c2128] text-sm px-4 py-2 rounded-md border border-[#30363d] flex items-center gap-2">
-          <Calendar size={16} /> All time
-        </button>
+      <div className="flex gap-3 mb-6">
+        <div className="relative">
+          <button
+            onClick={() => setShowDropdown(!showDropdown)}
+            className="bg-[#1c2128] text-sm px-4 py-2 rounded-md border border-[#30363d] flex items-center gap-2"
+          >
+            <GitBranch size={16} />
+            {branch}
+            <span className="text-gray-400">▼</span>
+          </button>
+
+          {showDropdown && (
+            <div className="absolute z-50 mt-2 w-64 bg-[#161b22] border border-[#30363d] rounded-md shadow-lg">
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Find a branch..."
+                className="bg-[#0d1117] text-white px-3 py-2 w-full text-sm border-b border-[#30363d] outline-none"
+              />
+              <div className="text-xs uppercase text-gray-400 px-3 pt-2 pb-1">Branches</div>
+              <ul className="max-h-60 overflow-y-auto">
+                {branches
+                  .filter((b) => b.toLowerCase().includes(search.toLowerCase()))
+                  .map((b) => (
+                    <li
+                      key={b}
+                      onClick={() => {
+                        setBranch(b);
+                        setShowDropdown(false);
+                      }}
+                      className={`px-3 py-2 text-sm text-white hover:bg-[#21262d] cursor-pointer flex justify-between items-center ${
+                        b === branch ? "bg-[#0d1117] font-semibold" : ""
+                      }`}
+                    >
+                      {b}
+                      {b === "main" && (
+                        <span className="text-[10px] bg-gray-700 px-2 py-0.5 rounded-full">default</span>
+                      )}
+                    </li>
+                  ))}
+              </ul>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Commits por fecha */}
-      <div className="space-y-6">
+      <div className="space-y-10">
         {Object.entries(commitsGrouped).map(([date, commits]) => (
           <div key={date}>
-            <h2 className="text-sm text-gray-400 font-semibold mb-2">Commits on {date}</h2>
-            <div className="space-y-3">
-              {commits.map((commit: Commit, index) => (
+            <div className="flex items-center gap-2 text-sm text-gray-400 font-semibold mb-2">
+              <GitCommitHorizontal size={16} /> Commits on {date}
+            </div>
+
+            <div className="border-l-[2px] border-[#30363d] pl-4 space-y-3 relative">
+              {commits.map((commit, index) => (
                 <div
                   key={index}
-                  className="bg-[#161b22] p-4 rounded-md border border-[#30363d] text-sm"
+                  className="bg-[#0d1117] p-4 rounded-md border border-[#30363d] text-sm flex justify-between items-start"
                 >
-                  <p className="text-white font-medium">
-                    {commit.message.includes("http") ? (
-                      <>
-                        Merge branch 'main' of{" "}
-                        <a
-                          href="https://github.com/RodrigoGarciaT/CodeMahindra"
-                          className="text-blue-400 underline"
-                        >
-                          https://github.com/RodrigoGarciaT/CodeMahindra
-                        </a>
-                      </>
-                    ) : (
-                      commit.message
-                    )}
-                  </p>
-                  <div className="text-gray-400 text-xs mt-1">
-                    {commit.author} committed {commit.date}
+                  <div className="flex flex-col gap-1 max-w-[70%]">
+                    <p className="text-white font-semibold leading-snug hover:text-blue-400 transition cursor-pointer text-lg">
+                      <Link to="/CommitFeedback">
+                        {commit.message.includes("http") ? (
+                          <>
+                            Merge branch 'main' of{" "}
+                            <a
+                              href="https://github.com/RodrigoGarciaT/CodeMahindra"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-400 underline"
+                            >
+                              GitHub
+                            </a>
+                          </>
+                        ) : (
+                          commit.message
+                        )}
+                      </Link>
+                    </p>
+                    <p className="text-gray-400 text-xs">
+                      <span className="text-green-400 font-medium">{commit.author}</span> committed {commit.date}
+                    </p>
                   </div>
-                  <div className="mt-2 flex justify-between items-center">
-                    <div className="flex gap-2 items-center">
-                      {getRetroBadge(commit.retro)}
+
+                  <div className="flex flex-col items-end justify-between gap-2 text-xs">
+                    <div className="flex items-center gap-2">{getRetroBadge(commit.retro)}</div>
+                    <div className="flex items-center gap-2 text-gray-400">
                       {commit.verified && (
-                        <span className="bg-green-600 text-xs px-2 py-0.5 rounded-md">
+                        <span className="bg-[#238636] text-white text-[10px] px-2 py-0.5 rounded-full font-medium inline-flex items-center gap-1">
+                          <CheckCircle size={12} strokeWidth={2.5} className="text-white" />
                           Verified
                         </span>
                       )}
-                    </div>
-                    <div className="flex items-center gap-3 text-gray-500 text-xs">
-                      {commit.hash}
+                      <Link
+                        to="/CommitFeedback"
+                        className="text-gray-300 text-xs px-2 py-1 rounded-md hover:bg-[#30363d] transition-colors font-mono"
+                      >
+                        {commit.hash}
+                      </Link>
                       <Link2 size={14} />
                     </div>
                   </div>

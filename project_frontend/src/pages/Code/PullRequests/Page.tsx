@@ -1,87 +1,14 @@
 import { useEffect, useState } from "react";
-
 import {
   GitPullRequest,
+  GitMerge,
+  XCircle,
+  MessageSquare,
   Settings,
   CheckCircle,
   GitCommitHorizontal,
-  MessageSquare
+  CheckIcon
 } from "lucide-react";
-
-const pullRequests = [
-  {
-    title: "Changes",
-    number: 25,
-    author: "David-A00882350",
-    date: "closed 2 days ago",
-    retro: "Analizando",
-    comments: 1
-  },
-  {
-    title: "Saul branch veracruzito ❌",
-    number: 24,
-    author: "Saul0Delgado",
-    date: "merged 3 days ago",
-    retro: "Con retro",
-    comments: 1
-  },
-  {
-    title: "Actualización de EditProfile ✔",
-    number: 13,
-    author: "Saul0Delgado",
-    date: "merged last month",
-    retro: "Sin cambios",
-    comments: 1
-  },
-  {
-    title: "Saul badges4",
-    number: 12,
-    author: "Saul0Delgado",
-    date: "merged 27 days ago",
-    retro: "Analizando",
-    comments: 1
-  },
-  {
-    title: "Te amo Rodrigo García <3",
-    number: 11,
-    author: "Saul0Delgado",
-    date: "merged 27 days ago",
-    retro: "Con retro",
-    comments: 1
-  },
-  {
-    title: "David X",
-    number: 10,
-    author: "RodrigoGarciaT",
-    date: "merged on Mar 29",
-    retro: "Sin cambios",
-    comments: 1
-  },
-  {
-    title: "enofniwiuqcb",
-    number: 9,
-    author: "RodrigoGarciaT",
-    date: "merged on Mar 29",
-    retro: "Analizando",
-    comments: 2
-  },
-  {
-    title: "updated navbar ❌",
-    number: 8,
-    author: "RodrigoGarciaT",
-    date: "merged on Mar 28",
-    retro: "Con retro",
-    comments: 1
-  },
-  {
-    title: "Added ProblemList ✔",
-    number: 7,
-    author: "RodrigoGarciaT",
-    date: "merged on Mar 28",
-    retro: "Sin cambios",
-    comments: 1
-  }
-];
 
 interface PullRequest {
   title: string;
@@ -90,6 +17,7 @@ interface PullRequest {
   date: string;
   retro: string;
   comments: number;
+  status: "open" | "closed" | "merged";
 }
 
 function RetroBadge({ retro }: { retro: string }) {
@@ -106,8 +34,35 @@ function RetroBadge({ retro }: { retro: string }) {
   }
 }
 
+function PullRequestItem({ pr }: { pr: PullRequest }) {
+  return (
+    <div className="px-4 py-3 flex justify-between items-center hover:bg-[#161b22] transition">
+      <div className="flex flex-col">
+        <div className="flex items-center gap-2 text-white font-semibold">
+          {pr.status === "open" && <GitPullRequest className="text-green-500" size={16} />}
+          {pr.status === "merged" && <GitMerge className="text-purple-500" size={16} />}
+          {pr.status === "closed" && <XCircle className="text-red-500" size={16} />}
+          {pr.title}
+        </div>
+        <p className="text-xs text-gray-400 mt-1">
+          #{pr.number} by {pr.author} was {pr.date}
+        </p>
+      </div>
+
+      <div className="flex items-center gap-4">
+        <RetroBadge retro={pr.retro} />
+        <div className="flex items-center gap-1 text-gray-400 text-xs">
+          <MessageSquare size={14} />
+          {pr.comments}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function PullRequests() {
   const [pullRequests, setPullRequests] = useState<PullRequest[]>([]);
+  const [activeTab, setActiveTab] = useState<"open" | "closed">("open");
 
   useEffect(() => {
     const fetchPRs = async () => {
@@ -123,35 +78,46 @@ export default function PullRequests() {
     fetchPRs();
   }, []);
 
+  const openPRs = pullRequests.filter(pr => pr.status === "open");
+  const closedPRs = pullRequests.filter(pr => pr.status === "closed" || pr.status === "merged");
+  const visiblePRs = activeTab === "open" ? openPRs : closedPRs;
+
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">Pull Requests</h1>
+    <div className="px-6 py-6 text-white">
+      <h1 className="text-2xl font-bold mb-6">Pull Requests</h1>
 
-      <div className="space-y-3">
-        {pullRequests.map((pr, index) => (
-          <div
-            key={index}
-            className="bg-[#161b22] p-4 rounded-md border border-[#30363d] text-sm flex justify-between items-center"
-          >
-            <div>
-              <p className="text-white font-semibold flex items-center gap-2">
-                <GitPullRequest size={16} className="text-purple-400" />
-                {pr.title}
-              </p>
-              <p className="text-xs text-gray-400 mt-1">
-                #{pr.number} by {pr.author} was {pr.date}
-              </p>
-            </div>
+      {/* GitHub-style tabs */}
+      <div className="flex items-center gap-6 text-sm mb-6">
+        <button
+          onClick={() => setActiveTab("open")}
+          className={`flex items-center gap-2 ${
+            activeTab === "open" ? "text-white" : "text-gray-400"
+          }`}
+        >
+          <GitPullRequest size={16} />
+          <span className="font-medium">{openPRs.length} Open</span>
+        </button>
 
-            <div className="flex items-center gap-4">
-              <RetroBadge retro={pr.retro} />
-              <div className="flex items-center gap-1 text-gray-400">
-                <MessageSquare size={14} />
-                <span className="text-xs">{pr.comments}</span>
-              </div>
-            </div>
-          </div>
-        ))}
+        <button
+          onClick={() => setActiveTab("closed")}
+          className={`flex items-center gap-2 ${
+            activeTab === "closed" ? "text-white" : "text-gray-400"
+          }`}
+        >
+          <CheckIcon size={16} />
+          <span className="font-medium">{closedPRs.length} Closed</span>
+        </button>
+      </div>
+
+      {/* PR list */}
+      <div className="divide-y divide-[#30363d] border border-[#30363d] rounded-md">
+        {visiblePRs.length > 0 ? (
+          visiblePRs.map((pr, index) => (
+            <PullRequestItem key={`${activeTab}-${index}`} pr={pr} />
+          ))
+        ) : (
+          <p className="px-4 py-6 text-center text-gray-400">No pull requests found.</p>
+        )}
       </div>
     </div>
   );

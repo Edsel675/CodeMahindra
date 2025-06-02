@@ -15,8 +15,13 @@ class TeamCreate(TeamBase):
 class TeamUpdate(TeamBase):
     pass
 
+class TeamJoin(BaseModel):
+    team_code: str
+    
 class TeamOut(TeamBase):
     id: int
+    name: str
+    code: str
 
     class Config:
         from_attributes = True

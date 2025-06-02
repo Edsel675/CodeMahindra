@@ -30,11 +30,11 @@ const isAdmin = user?.isAdmin === true;
 
   // Filtramos los ítems visibles según si es admin
   const visibleNavItems = navItems.filter(item => {
-  if (isAdmin) {
-    return item.path === "/admin"; // Solo mostrar /admin si es admin
-  } else {
-    return item.path !== "/admin"; // Ocultar /admin para usuarios normales
-  }
+    // Si no es admin, ocultamos solo la ruta /admin
+    if (!isAdmin && item.path === "/admin") {
+      return false;
+    }
+    return true; // Mostrar todo lo demás
   });
 
 

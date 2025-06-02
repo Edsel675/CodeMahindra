@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 from github import get_grouped_commits, get_pull_requests
 
@@ -16,8 +16,8 @@ app.add_middleware(
 )
 
 @app.get("/commits")
-async def get_commits():
-    return await get_grouped_commits()
+async def get_commits(branch: str = Query(default="main")):
+    return await get_grouped_commits(branch)
 
 @app.get("/pull-requests")
 async def pull_requests_endpoint():

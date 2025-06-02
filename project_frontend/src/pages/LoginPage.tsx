@@ -153,9 +153,11 @@ const LoginPage: React.FC = () => {
 
   const params = new URLSearchParams(window.location.search);
   const token = params.get("token");
+  const user_id = params.get("user_id");
 
-  if (token) {
+  if (token && user_id) {
     localStorage.setItem("token", token);
+    localStorage.setItem("user_id", user_id);
 
     try {
       const user = jwtDecode(token);

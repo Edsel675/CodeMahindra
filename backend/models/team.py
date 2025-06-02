@@ -3,7 +3,7 @@ from sqlalchemy.orm import relationship
 from database import Base
 
 class Team(Base):
-    __tablename__ = "Team"  
+    __tablename__ = "Team"
 
     id = Column(Integer, primary_key=True, index=True)
     creationDate = Column(DateTime)
@@ -11,6 +11,6 @@ class Team(Base):
     experience = Column(Integer)
     level = Column(Integer)
     name = Column(String(255))
+    code = Column(String(10), unique=True, index=True)
 
-    # Relación inversa con Employee
     employees = relationship("Employee", back_populates="team")
