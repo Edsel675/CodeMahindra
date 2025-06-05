@@ -45,7 +45,10 @@ def create_employee(db: Session, employee_create: EmployeeCreate):
         phoneNumber=employee_create.phoneNumber,
         profilePicture=employee_create.profilePicture,
         github_username=employee_create.github_username,
+        github_token=employee_create.github_token,
     )
+
+    print(f"[DEBUG] github_token guardado: {db_employee.github_token}")
 
     db.add(db_employee)
     db.commit()
@@ -189,7 +192,7 @@ def login_with_github():
     redirect_uri = "https://code-mahindra-backend.vercel.app/auth/github/callback"
     github_auth_url = (
         f"https://github.com/login/oauth/authorize"
-        f"?client_id={github_client_id}&redirect_uri={redirect_uri}&scope=user:email"
+        f"?client_id={github_client_id}&redirect_uri={redirect_uri}&scope=user:email,repo"
     )
     return RedirectResponse(url=github_auth_url)
 
@@ -220,25 +223,23 @@ def github_callback(code: str, db: Session = Depends(get_db)):
         headers={"Authorization": f"token {access_token}"}
     )
     user_data = user_response.json()
-    github_username = user_data.get("login")
 
-    # Obtener correos del usuario
+    github_username = user_data.get("login")
+    print("[DEBUG] github_username obtenido:", github_username)
+
+    # Obtener correo del usuario (primario y verificado)
     emails_response = external_requests.get(
         "https://api.github.com/user/emails",
         headers={"Authorization": f"token {access_token}"}
     )
     emails_data = emails_response.json()
 
-    # Buscar el email primario y verificado
     primary_email = next(
         (email["email"] for email in emails_data if email["primary"] and email["verified"]),
         None
     )
-    
-    # Si no hay email primario, utilizamos un email falso
-    email = primary_email or f"{user_data['id']}@github.fake"
 
-    # Nombre completo
+    email = primary_email or f"{user_data['id']}@github.fake"
     full_name = user_data.get("name") or user_data.get("login")
     parts = full_name.strip().split()
     if len(parts) >= 2:
@@ -248,27 +249,25 @@ def github_callback(code: str, db: Session = Depends(get_db)):
         first_name = full_name
         last_name = "GitHub"
 
-    # Verifica que github_username no sea None o vacío
-    print("[DEBUG] github_username obtenido de GitHub:", github_username)
-
-    # Buscar o crear usuario en la base de datos
+    # Aquí, pasamos correctamente el github_token como access_token
     user = get_user_by_email(db, email)
     if not user:
         new_user = EmployeeCreate(
             email=email,
-            password="github",  # Aquí se puede usar una contraseña temporal o en blanco
+            password="github",  # Usamos una contraseña temporal o en blanco
             firstName=first_name,
             lastName=last_name,
             nationality="No especificado",
             phoneNumber="0000000000",
             profilePicture=user_data.get("avatar_url"),
             github_username=github_username,
+            github_token=access_token,  # Aquí pasamos el access_token como github_token
         )
         user = create_employee(db, new_user)
 
-    # Generar JWT con los datos del usuario
+    # Generar JWT con los datos del usuario, ahora con el github_token
     token = create_access_token(data={
-        "sub": str(user.id), 
+        "sub": str(user.id),
         "email": user.email,
         "firstName": user.firstName,
         "lastName": user.lastName,
@@ -278,15 +277,18 @@ def github_callback(code: str, db: Session = Depends(get_db)):
         "profilePicture": user.profilePicture,
         "position_id": user.position_id,
         "team_id": user.team_id,
-        "github_username": github_username
+        "github_username": github_username,
+        "github_token": access_token,  # Aquí también pasamos el github_token al JWT
     })
-    
+
     # Redirigir al frontend con el token
     return RedirectResponse(
         url="http://code-mahindra-w4lk.vercel.app/login?" + urllib.parse.urlencode({
             "token": token
         })
     )
+
+
 
 
 
