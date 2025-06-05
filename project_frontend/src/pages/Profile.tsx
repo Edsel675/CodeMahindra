@@ -182,7 +182,7 @@ export default function ProfilePage() {
           <div className="grid gap-6 md:grid-cols-2">
             <div className="space-y-6 mt-[120px]">
               <Card className="overflow-hidden bg-[#E6E7E8] p-6">
-                  <div className="relative mt-6 w-full max-w-md mx-auto">
+                  <div className="relative mt-6 w-full max-w-full mx-auto">
                     <div className="flex items-center rounded-full bg-white p-3 shadow-md">
                       <div className="mr-3 h-12 w-12 overflow-hidden rounded-full border-2 border-white">
                       <img src={user?.profilePicture ?? profilePic} alt="Profile" className="h-full w-full object-cover" />
@@ -190,7 +190,11 @@ export default function ProfilePage() {
                       <div className="flex-1">
                         <div className="flex items-center">
                         <h2 className="text-lg font-bold text-black">{user ? `${user.firstName} ${user.lastName}` : "Cargando..."}</h2>
-                          <img src={flag} alt="Flag" className="h-5 w-6" />
+                          {user?.nationality ? (
+                        <CountryName code={user.nationality} />
+                      ) : (
+                        <span>No especificado</span>
+                      )}
                         </div>
                       </div>
                       <div className="flex items-center text-black">

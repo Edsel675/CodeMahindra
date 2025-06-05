@@ -3,7 +3,7 @@ import { Github } from "lucide-react";
 
 const GitHubButton: React.FC = () => {
   const handleGitHubLogin = () => {
-    window.location.href = "https://code-mahindra-backend.vercel.app/auth/github"; // 🔁 cambia a tu dominio en producción
+    window.location.href = "http://localhost:5173/auth/github"; // 🔁 cambia a tu dominio en producción
   };
 
   return (
